@@ -22,14 +22,14 @@
 
 /* ---------- Pocket Card Base ---------- */
 .pocket-card {
-    width: 3.5in;
-    height: 2in;
-    padding: 0.1in 0.12in;
+    width: 2in;
+    height: 3.5in;
+    padding: 0.08in 0.1in;
     box-sizing: border-box;
     overflow: hidden;
     font-family: "Segoe UI", Arial, Helvetica, sans-serif;
-    font-size: 7pt;
-    line-height: 1.15;
+    font-size: 6.5pt;
+    line-height: 1.12;
     color: #000;
     background: #fff;
 }
@@ -45,7 +45,7 @@
 
 .player-name {
     font-weight: 700;
-    font-size: 8pt;
+    font-size: 7pt;
 }
 
 .card-date {
@@ -57,7 +57,7 @@
 .pocket-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 7pt;
+    font-size: 6.5pt;
 }
 
 .pocket-table th {
@@ -65,15 +65,15 @@
     color: #fff;
     font-weight: 700;
     text-align: center;
-    padding: 1.5pt 3pt;
-    font-size: 6.5pt;
+    padding: 1.5pt 2pt;
+    font-size: 6pt;
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
 
 .pocket-table td {
     text-align: center;
-    padding: 1pt 3pt;
+    padding: 1pt 2pt;
     border-bottom: 0.25pt solid #ddd;
     font-variant-numeric: tabular-nums;
 }
@@ -81,7 +81,7 @@
 .pocket-table .club-col {
     text-align: left;
     font-weight: 700;
-    width: 28px;
+    width: 22px;
 }
 
 .pocket-table tbody tr:nth-child(even) {
@@ -96,7 +96,7 @@
 /* ---------- Print Page Setup ---------- */
 @media print {
     @page {
-        size: 3.5in 2in;
+        size: 2in 3.5in;
         margin: 0;
     }
 
@@ -108,7 +108,7 @@
     html, body {
         margin: 0;
         padding: 0;
-        width: 3.5in;
+        width: 2in;
         background: #fff;
     }
 
