@@ -112,18 +112,25 @@ function initBatchSelectExclude() {
     var selectAll = document.getElementById('select-all');
     var excludeBtn = document.getElementById('batch-exclude-btn');
     var includeBtn = document.getElementById('batch-include-btn');
-    var checkboxes = document.querySelectorAll('.shot-checkbox');
 
     if (!selectAll || !excludeBtn) return;
 
     selectAll.addEventListener('change', function () {
         var checked = this.checked;
-        checkboxes.forEach(function (cb) { cb.checked = checked; });
+        // Only toggle visible rows
+        document.querySelectorAll('.shot-data-row').forEach(function (row) {
+            if (row.style.display !== 'none') {
+                var cb = row.querySelector('.shot-checkbox');
+                if (cb) cb.checked = checked;
+            }
+        });
         updateBatchButtons();
     });
 
-    checkboxes.forEach(function (cb) {
-        cb.addEventListener('change', updateBatchButtons);
+    document.getElementById('shots-table').addEventListener('change', function (e) {
+        if (e.target.classList.contains('shot-checkbox')) {
+            updateBatchButtons();
+        }
     });
 
     excludeBtn.addEventListener('click', function () {
@@ -142,7 +149,9 @@ function initBatchSelectExclude() {
 
     function batchToggleExclude(exclude) {
         var selected = document.querySelectorAll('.shot-checkbox:checked');
-        var ids = Array.from(selected).map(function (cb) { return cb.value; });
+        var ids = Array.from(selected).map(function (cb) { return parseInt(cb.value, 10); });
+
+        if (!ids.length) return;
 
         fetch('/shots/batch-exclude', {
             method: 'POST',
@@ -156,6 +165,8 @@ function initBatchSelectExclude() {
             .then(function (data) {
                 if (data.success) {
                     window.location.reload();
+                } else {
+                    console.error('Batch operation error:', data.error);
                 }
             })
             .catch(function (err) {

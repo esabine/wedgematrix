@@ -370,29 +370,31 @@ def register_routes(app):
     def api_analytics(chart_type):
         session_id = request.args.get('session_id', type=int)
         club = request.args.get('club')
+        date_range = request.args.get('date_range', '')
+        date_from = parse_date_range(date_range)
 
         if chart_type == 'dispersion':
-            return jsonify(dispersion_data(session_id=session_id, club_short=club))
+            return jsonify(dispersion_data(session_id=session_id, club_short=club, date_from=date_from))
         elif chart_type == 'spin-carry':
-            return jsonify(spin_vs_carry_data(session_id=session_id, club_short=club))
+            return jsonify(spin_vs_carry_data(session_id=session_id, club_short=club, date_from=date_from))
         elif chart_type == 'shot-shape':
-            return jsonify(shot_shape_data(session_id=session_id, club_short=club))
+            return jsonify(shot_shape_data(session_id=session_id, club_short=club, date_from=date_from))
         elif chart_type == 'carry-distribution':
-            raw = carry_distribution(session_id=session_id, club_short=club)
+            raw = carry_distribution(session_id=session_id, club_short=club, date_from=date_from)
             flat = []
             for club_name, stats in raw.items():
                 for v in stats['values']:
                     flat.append({'club': club_name, 'carry': v})
             return jsonify(flat)
         elif chart_type == 'loft-trend':
-            raw = analyze_loft(session_id=session_id, club_short=club)
+            raw = analyze_loft(session_id=session_id, club_short=club, date_from=date_from)
             result = [
                 {'club': r['club_short'], 'dynamic_loft': r['dynamic_loft']}
                 for r in raw if r['dynamic_loft'] is not None
             ]
             return jsonify(result)
         elif chart_type == 'club-comparison':
-            stats = per_club_statistics(session_id=session_id)
+            stats = per_club_statistics(session_id=session_id, date_from=date_from)
             result = []
             for c in CLUB_ORDER:
                 if c in stats:
@@ -405,9 +407,9 @@ def register_routes(app):
                     })
             return jsonify(result)
         elif chart_type == 'loft-analysis':
-            return jsonify(analyze_loft(session_id=session_id, club_short=club))
+            return jsonify(analyze_loft(session_id=session_id, club_short=club, date_from=date_from))
         elif chart_type == 'loft-summary':
-            return jsonify(loft_summary(session_id=session_id))
+            return jsonify(loft_summary(session_id=session_id, date_from=date_from))
         elif chart_type == 'errant-flags':
             if session_id is None:
                 return jsonify({'error': 'session_id required'}), 400
