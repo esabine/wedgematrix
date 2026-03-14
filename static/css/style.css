@@ -167,6 +167,22 @@ main {
 }
 
 /* ---------- Shot Data Table ---------- */
+.shot-data-table {
+    font-size: 0.8rem;
+}
+
+.shot-data-table th {
+    white-space: nowrap;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.4rem;
+}
+
+.shot-data-table td {
+    white-space: nowrap;
+    padding: 0.25rem 0.4rem;
+    font-variant-numeric: tabular-nums;
+}
+
 .shot-data-row {
     transition: background-color 0.15s ease;
 }

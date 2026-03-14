@@ -72,19 +72,28 @@
 <!-- Shot Table -->
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
-        <table class="table table-sm table-hover mb-0" id="shots-table">
+        <table class="table table-sm table-hover mb-0 shot-data-table" id="shots-table">
             <thead class="table-golf">
                 <tr>
                     <th style="width:30px;"></th>
                     <th>Club</th>
+                    <th>Swing</th>
                     <th>Carry</th>
                     <th>Total</th>
-                    <th>Offline</th>
-                    <th>Launch&deg;</th>
-                    <th>Spin</th>
-                    <th>Dyn. Loft</th>
-                    <th>Loft <i class="bi bi-info-circle text-muted" title="✓ = dynamic loft ≤ standard loft (good compression)"></i></th>
-                    <th class="text-center">Status</th>
+                    <th>Offl</th>
+                    <th>L.Ang</th>
+                    <th>L.Dir</th>
+                    <th>Spn&nbsp;Rate</th>
+                    <th>Back</th>
+                    <th>Side</th>
+                    <th>Ball&nbsp;Spd</th>
+                    <th>Apex</th>
+                    <th>Land&deg;</th>
+                    <th>Path</th>
+                    <th>Face</th>
+                    <th>Atk</th>
+                    <th>D.Loft</th>
+                    <th class="text-center">Excl</th>
                     <th class="text-end">Action</th>
                 </tr>
             </thead>
@@ -96,32 +105,29 @@
                         <input type="checkbox" class="form-check-input shot-checkbox" value="{{ shot.id }}">
                     </td>
                     <td class="fw-semibold">{{ shot.club_short }}</td>
-                    <td>{{ shot.carry|round(0)|int if shot.carry else '—' }}</td>
-                    <td>{{ shot.total|round(0)|int if shot.total else '—' }}</td>
+                    <td>{{ shot.swing_size or '—' }}</td>
+                    <td>{{ shot.carry|round(1) if shot.carry else '—' }}</td>
+                    <td>{{ shot.total|round(1) if shot.total else '—' }}</td>
                     <td class="{{ 'text-danger' if shot.offline and shot.offline|abs > 15 else '' }}">
                         {{ shot.offline|round(1) if shot.offline else '—' }}
                     </td>
                     <td>{{ shot.launch_angle|round(1) if shot.launch_angle else '—' }}</td>
+                    <td>{{ shot.launch_direction_deg|round(1) if shot.launch_direction_deg else '—' }}</td>
                     <td>{{ shot.spin_rate if shot.spin_rate else '—' }}</td>
+                    <td>{{ shot.back_spin if shot.back_spin else '—' }}</td>
+                    <td>{{ shot.side_spin if shot.side_spin else '—' }}</td>
+                    <td>{{ shot.ball_speed|round(1) if shot.ball_speed else '—' }}</td>
+                    <td>{{ shot.apex|round(1) if shot.apex else '—' }}</td>
+                    <td>{{ shot.landing_angle|round(1) if shot.landing_angle else '—' }}</td>
+                    <td>{{ shot.club_path|round(1) if shot.club_path else '—' }}</td>
+                    <td>{{ shot.face_angle|round(1) if shot.face_angle else '—' }}</td>
+                    <td>{{ shot.attack_angle|round(1) if shot.attack_angle else '—' }}</td>
                     <td>{{ shot.dynamic_loft|round(1) if shot.dynamic_loft else '—' }}</td>
-                    <td>
-                        {% if shot.dynamic_loft and shot.standard_loft %}
-                            {% if shot.dynamic_loft <= shot.standard_loft %}
-                                <span class="text-success" title="Good compression: {{ shot.dynamic_loft }}° ≤ {{ shot.standard_loft }}°">✓</span>
-                            {% else %}
-                                <span class="text-danger" title="High loft: {{ shot.dynamic_loft }}° > {{ shot.standard_loft }}°">✗</span>
-                            {% endif %}
-                        {% else %}
-                            <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
                     <td class="text-center">
                         {% if shot.excluded %}
-                            <span class="badge bg-secondary">Excluded</span>
-                        {% elif shot.errant %}
-                            <span class="badge bg-warning text-dark">Flagged</span>
+                            <span class="badge bg-secondary">Yes</span>
                         {% else %}
-                            <span class="badge bg-light text-dark">Active</span>
+                            <span class="badge bg-light text-dark">—</span>
                         {% endif %}
                     </td>
                     <td class="text-end">

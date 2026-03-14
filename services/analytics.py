@@ -1,5 +1,5 @@
 import numpy as np
-from models.database import db, Shot, ClubLoft
+from models.database import db, Session, Shot, ClubLoft
 
 
 def percentile_value(values, percentile):
@@ -28,12 +28,15 @@ def compute_percentile_for_club(session_id, club_short, percentile):
     return percentile_value(carries, percentile)
 
 
-def get_shots_query(session_id=None, club_short=None, swing_size=None, excluded=False):
+def get_shots_query(session_id=None, club_short=None, swing_size=None, excluded=False, date_from=None):
     """Build a base shot query with common filters.
 
     By default excludes excluded shots unless excluded=None (return all).
+    date_from: if set, only include shots from sessions on or after this date.
     """
     q = Shot.query
+    if date_from is not None:
+        q = q.join(Session).filter(Session.session_date >= date_from)
     if session_id is not None:
         q = q.filter(Shot.session_id == session_id)
     if club_short is not None:
