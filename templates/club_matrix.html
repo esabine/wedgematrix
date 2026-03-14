@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Club Matrix{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3"><i class="bi bi-grid-3x3"></i> Club Matrix</h1>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('print_card') }}" class="btn btn-outline-secondary" title="Print pocket card">
+            <i class="bi bi-printer"></i> Print Card
+        </a>
+    </div>
+</div>
+
+<!-- Controls -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label form-label-sm mb-1">Session Scope</label>
+                <select id="session-scope" class="form-select form-select-sm" data-matrix="club">
+                    <option value="">All Sessions</option>
+                    {% for session in sessions %}
+                    <option value="{{ session.id }}"
+                            {% if selected_session == session.id %}selected{% endif %}>
+                        {{ session.session_date.strftime('%b %d, %Y') if session.session_date else session.filename }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label form-label-sm mb-1">Percentile</label>
+                <select id="percentile-select" class="form-select form-select-sm" data-matrix="club">
+                    <option value="50" {% if percentile == 50 %}selected{% endif %}>P50 (Median)</option>
+                    <option value="60" {% if percentile == 60 %}selected{% endif %}>P60</option>
+                    <option value="70" {% if percentile == 70 %}selected{% endif %}>P70</option>
+                    <option value="75" {% if percentile == 75 or not percentile %}selected{% endif %}>P75 (Default)</option>
+                    <option value="80" {% if percentile == 80 %}selected{% endif %}>P80</option>
+                    <option value="90" {% if percentile == 90 %}selected{% endif %}>P90</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Club Matrix Table -->
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 matrix-table" id="club-matrix-table">
+            <thead>
+                <tr class="table-golf">
+                    <th class="matrix-header-club">Club</th>
+                    <th class="matrix-header text-center">Carry</th>
+                    <th class="matrix-header text-center">Total</th>
+                    <th class="matrix-header text-center">Max</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in matrix %}
+                <tr>
+                    <td class="fw-bold matrix-club-cell">{{ row.club }}</td>
+                    <td class="text-center matrix-cell {{ 'has-data' if row.carry else '' }}">
+                        {{ row.carry if row.carry else '—' }}
+                    </td>
+                    <td class="text-center matrix-cell {{ 'has-data' if row.total else '' }}">
+                        {{ row.total if row.total else '—' }}
+                    </td>
+                    <td class="text-center matrix-cell {{ 'has-data' if row.max else '' }}">
+                        {{ row.max if row.max else '—' }}
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {% if not matrix %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        No club data available. <a href="{{ url_for('import_data') }}">Import a session</a> to populate the matrix.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<p class="text-muted small mt-2">
+    <i class="bi bi-info-circle"></i>
+    Carry &amp; Total use P{{ percentile or 75 }} percentile of non-excluded shots. Max is the highest total ever recorded.
+</p>
+{% endblock %}

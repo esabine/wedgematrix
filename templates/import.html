@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Import Data{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3"><i class="bi bi-upload"></i> Import CSV Data</h1>
+</div>
+
+<!-- Step 1: Upload -->
+<div id="upload-section" {% if parsed_shots %}style="display:none"{% endif %}>
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form id="upload-form" action="{{ url_for('import_upload') }}" method="POST" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="csv-file" class="form-label fw-semibold">Select CSV File</label>
+                    <input type="file" class="form-control" id="csv-file" name="file" accept=".csv" required>
+                    <div class="form-text">Export from your launch monitor and upload the .csv file.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Data Type</label>
+                    <div class="d-flex gap-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="data_type" id="type-club" value="club" checked>
+                            <label class="form-check-label" for="type-club">
+                                <i class="bi bi-grid-3x3"></i> Club Data
+                                <small class="text-muted d-block">Full swings — all shots tagged as "full"</small>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="data_type" id="type-wedge" value="wedge">
+                            <label class="form-check-label" for="type-wedge">
+                                <i class="bi bi-grid"></i> Wedge Data
+                                <small class="text-muted d-block">Partial swings — you'll tag swing sizes next</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-golf" id="upload-btn">
+                    <i class="bi bi-cloud-upload"></i> Upload &amp; Parse
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Step 2: Preview & Tag -->
+{% if parsed_shots %}
+<div id="preview-section">
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                {{ session_info.filename }} — {{ session_info.date }} @ {{ session_info.location }}
+                <span class="badge bg-{{ 'primary' if session_info.data_type == 'club' else 'success' }} ms-2">
+                    {{ session_info.data_type|capitalize }}
+                </span>
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">{{ parsed_shots|length }} shots parsed successfully.</p>
+
+            {% if session_info.data_type == 'wedge' %}
+            <!-- Swing Size Tagging UI -->
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>Tag swing sizes:</strong> Select contiguous rows within each club group, then assign a swing size from the dropdown.
+            </div>
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <label class="fw-semibold text-nowrap">Assign to selected:</label>
+                <select id="swing-size-select" class="form-select form-select-sm" style="width: auto;">
+                    <option value="">Choose size…</option>
+                    <option value="4/4">4/4 (Full)</option>
+                    <option value="3/4">3/4</option>
+                    <option value="2/4">2/4 (Half)</option>
+                    <option value="1/4">1/4 (Quarter)</option>
+                    <option value="10:2">10:2</option>
+                    <option value="10:3">10:3</option>
+                    <option value="9:3">9:3</option>
+                    <option value="8:4">8:4</option>
+                </select>
+                <button id="assign-size-btn" class="btn btn-sm btn-outline-golf" disabled>
+                    <i class="bi bi-tag"></i> Assign
+                </button>
+                <button id="clear-selection-btn" class="btn btn-sm btn-outline-secondary">
+                    Clear Selection
+                </button>
+            </div>
+            {% endif %}
+
+            <form id="save-import-form" action="{{ url_for('import_save') }}" method="POST">
+                <input type="hidden" name="session_info" value='{{ session_info|tojson }}'>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover shot-preview-table" id="shot-preview-table">
+                        <thead class="table-golf">
+                            <tr>
+                                {% if session_info.data_type == 'wedge' %}
+                                <th style="width: 30px;">
+                                    <input type="checkbox" id="select-all-shots" class="form-check-input">
+                                </th>
+                                {% endif %}
+                                <th>#</th>
+                                <th>Club</th>
+                                <th>Carry</th>
+                                <th>Total</th>
+                                <th>Offline</th>
+                                <th>Launch Angle</th>
+                                <th>Spin Rate</th>
+                                <th>Dynamic Loft</th>
+                                {% if session_info.data_type == 'wedge' %}
+                                <th>Swing Size</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for shot in parsed_shots %}
+                            <tr class="shot-row {% if loop.previtem is defined and loop.previtem.club != shot.club %}club-group-start{% endif %}"
+                                data-index="{{ loop.index0 }}"
+                                data-club="{{ shot.club_short }}">
+                                {% if session_info.data_type == 'wedge' %}
+                                <td>
+                                    <input type="checkbox" class="form-check-input shot-select" data-index="{{ loop.index0 }}">
+                                </td>
+                                {% endif %}
+                                <td class="text-muted">{{ loop.index }}</td>
+                                <td class="fw-semibold">{{ shot.club_short }}</td>
+                                <td>{{ shot.carry|round(1) if shot.carry else '—' }}</td>
+                                <td>{{ shot.total|round(1) if shot.total else '—' }}</td>
+                                <td>{{ shot.offline|round(1) if shot.offline else '—' }}</td>
+                                <td>{{ shot.launch_angle|round(1) if shot.launch_angle else '—' }}</td>
+                                <td>{{ shot.spin_rate if shot.spin_rate else '—' }}</td>
+                                <td>{{ shot.dynamic_loft|round(1) if shot.dynamic_loft else '—' }}</td>
+                                {% if session_info.data_type == 'wedge' %}
+                                <td>
+                                    <span class="swing-size-badge" data-index="{{ loop.index0 }}">—</span>
+                                    <input type="hidden" name="swing_sizes[{{ loop.index0 }}]"
+                                           class="swing-size-input" data-index="{{ loop.index0 }}" value="">
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <input type="hidden" name="shots_data" value='{{ parsed_shots|tojson }}'>
+
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <a href="{{ url_for('import_data') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Start Over
+                    </a>
+                    <button type="submit" class="btn btn-golf btn-lg" id="save-import-btn">
+                        <i class="bi bi-check-circle"></i> Save Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/import.js') }}"></script>
+{% endblock %}

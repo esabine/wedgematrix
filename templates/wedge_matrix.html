@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Wedge Matrix{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3"><i class="bi bi-grid"></i> Wedge Matrix</h1>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('print_card') }}" class="btn btn-outline-secondary" title="Print pocket card">
+            <i class="bi bi-printer"></i> Print Card
+        </a>
+    </div>
+</div>
+
+<!-- Controls -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label form-label-sm mb-1">Session Scope</label>
+                <select id="session-scope" class="form-select form-select-sm" data-matrix="wedge">
+                    <option value="">All Sessions</option>
+                    {% for session in sessions %}
+                    <option value="{{ session.id }}"
+                            {% if selected_session == session.id %}selected{% endif %}>
+                        {{ session.session_date.strftime('%b %d, %Y') if session.session_date else session.filename }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label form-label-sm mb-1">Percentile</label>
+                <select id="percentile-select" class="form-select form-select-sm" data-matrix="wedge">
+                    <option value="50" {% if percentile == 50 %}selected{% endif %}>P50 (Median)</option>
+                    <option value="60" {% if percentile == 60 %}selected{% endif %}>P60</option>
+                    <option value="70" {% if percentile == 70 %}selected{% endif %}>P70</option>
+                    <option value="75" {% if percentile == 75 or not percentile %}selected{% endif %}>P75 (Default)</option>
+                    <option value="80" {% if percentile == 80 %}selected{% endif %}>P80</option>
+                    <option value="90" {% if percentile == 90 %}selected{% endif %}>P90</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Wedge Matrix Table -->
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 matrix-table" id="wedge-matrix-table">
+            <thead>
+                <tr class="table-golf">
+                    <th class="matrix-header-club">Swing Size</th>
+                    <th class="matrix-header text-center">AW</th>
+                    <th class="matrix-header text-center">SW</th>
+                    <th class="matrix-header text-center">LW</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set swing_sizes = ['4/4', '3/4', '2/4', '1/4', '10:2', '10:3', '9:3', '8:4'] %}
+                {% set fraction_sizes = ['4/4', '3/4', '2/4', '1/4'] %}
+
+                {% for size in swing_sizes %}
+                <tr class="{% if size == '10:2' %}wedge-clock-divider{% endif %}">
+                    <td class="fw-bold matrix-club-cell">{{ size }}</td>
+                    {% for club in ['AW', 'SW', 'LW'] %}
+                    <td class="text-center matrix-cell {{ 'has-data' if matrix.get(size, {}).get(club) else '' }}">
+                        {% set cell = matrix.get(size, {}).get(club) %}
+                        {% if cell %}
+                            {% if size in fraction_sizes %}
+                                {{ cell.carry }}
+                            {% else %}
+                                {{ cell.carry }}/{{ cell.max }}
+                            {% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+
+                {% if not matrix %}
+                <tr>
+                    <td colspan="4" class="text-center text-muted py-4">
+                        No wedge data available. <a href="{{ url_for('import_data') }}">Import a wedge session</a> to populate the matrix.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<p class="text-muted small mt-2">
+    <i class="bi bi-info-circle"></i>
+    Fraction sizes (4/4–1/4) show carry only. Clock-hand sizes (10:2–8:4) show carry/max.
+    Values use P{{ percentile or 75 }} percentile of non-excluded shots.
+</p>
+{% endblock %}

@@ -1,0 +1,37 @@
+# Project Context
+
+- **Owner:** ersabine
+- **Project:** wedgeMatrix — Golf launch monitor analytics app with percentile-based club/wedge matrices and pocket card printing
+- **Stack:** Python 3.11+, Flask, SQLite/SQLAlchemy, Pandas/NumPy, Bootstrap 5, Chart.js
+- **Created:** 2026-03-14
+
+## Learnings
+
+<!-- Append new learnings below. Each entry is something lasting about the project. -->
+
+### 2026-03-14 — Complete test suite built (79 tests)
+
+**Files created:**
+- `tests/__init__.py` — package init
+- `tests/conftest.py` — shared fixtures (Flask app, in-memory SQLite, sample data, seeded club_lofts)
+- `tests/test_csv_parser.py` — 27 tests (header, direction, club names, real CSV integration, malformed)
+- `tests/test_analytics.py` — 10 tests (percentile math, exclusion, errant flagging, per-club stats)
+- `tests/test_club_matrix.py` — 9 tests (basic, ordering, scope, exclusions, rounding, empty, percentile)
+- `tests/test_wedge_matrix.py` — 7 tests (AW/SW/LW only, fraction vs clock display, empty cell, exclusions)
+- `tests/test_loft_analysis.py` — 12 tests (good/bad assessment, per-club %, exclusions, edge cases) [14 total with parametrize]
+
+**Edge cases discovered from real CSV data:**
+- `NaN` appears in Landing Angle for G-Wedge shots → direction parser must handle it
+- Dynamic Loft = 0.0 appears in real data for some wedge shots (Club Path/Face Angle also zero)
+- Side Spin column uses L/R prefix *and* a leading sign character (e.g., `L2908`, `R928`)
+- Offline uses L/R prefix (e.g., `L10.0`, `R22.1`) — same parsing as Launch Direction
+- The CSV header column has a leading space: `" Dynamic Loft"` not `"Dynamic Loft"`
+- Clevelands file has no Driver or 3 Wood; Esabine has no 7 Iron or 3 Hybrid
+- Carry = 0.7 and 0.5 appear for duffed shots — must not crash percentile calcs
+
+**Key design patterns:**
+- All percentile assertions verified against `numpy.percentile()` as ground truth
+- Real CSV paths wired as session-scoped fixtures for integration tests
+- Per-test in-memory SQLite ensures isolation (no cross-test bleed)
+- `_make_shot()` helper in conftest reduces boilerplate across all test modules
+- Tests are structured to be flexible on return format (dict vs list) for wedge matrix

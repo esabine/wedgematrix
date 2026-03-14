@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3"><i class="bi bi-speedometer2"></i> Dashboard</h1>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card summary-card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="summary-icon text-golf">
+                    <i class="bi bi-calendar3"></i>
+                </div>
+                <h2 class="display-6 fw-bold">{{ total_sessions }}</h2>
+                <p class="text-muted mb-0">Sessions</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card summary-card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="summary-icon text-golf">
+                    <i class="bi bi-bullseye"></i>
+                </div>
+                <h2 class="display-6 fw-bold">{{ total_shots }}</h2>
+                <p class="text-muted mb-0">Shots Recorded</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card summary-card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="summary-icon text-golf">
+                    <i class="bi bi-collection"></i>
+                </div>
+                <h2 class="display-6 fw-bold">{{ clubs_tracked }}</h2>
+                <p class="text-muted mb-0">Clubs Tracked</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Links -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <a href="{{ url_for('club_matrix') }}" class="card quick-link-card border-0 shadow-sm text-decoration-none">
+            <div class="card-body">
+                <h5 class="card-title text-golf"><i class="bi bi-grid-3x3"></i> Club Matrix</h5>
+                <p class="card-text text-muted">View percentile-based distances for every club in your bag.</p>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{{ url_for('wedge_matrix') }}" class="card quick-link-card border-0 shadow-sm text-decoration-none">
+            <div class="card-body">
+                <h5 class="card-title text-golf"><i class="bi bi-grid"></i> Wedge Matrix</h5>
+                <p class="card-text text-muted">Swing size breakdown for AW, SW, and LW wedges.</p>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{{ url_for('import_data') }}" class="card quick-link-card border-0 shadow-sm text-decoration-none">
+            <div class="card-body">
+                <h5 class="card-title text-golf"><i class="bi bi-upload"></i> Import Data</h5>
+                <p class="card-text text-muted">Upload a CSV from your launch monitor session.</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Recent Sessions -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recent Sessions</h5>
+        <a href="{{ url_for('sessions') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+    </div>
+    <div class="card-body p-0">
+        {% if recent_sessions %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Location</th>
+                        <th>Type</th>
+                        <th>Shots</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in recent_sessions %}
+                    <tr>
+                        <td>{{ session.session_date.strftime('%b %d, %Y') if session.session_date else 'N/A' }}</td>
+                        <td>{{ session.location or 'Unknown' }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'primary' if session.data_type == 'club' else 'success' }}">
+                                {{ session.data_type|capitalize }}
+                            </span>
+                        </td>
+                        <td>{{ session.shots.count() }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox display-4"></i>
+            <p class="mt-2">No sessions yet. <a href="{{ url_for('import_data') }}">Import your first CSV</a> to get started.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

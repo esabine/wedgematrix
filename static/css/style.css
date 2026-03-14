@@ -1,0 +1,281 @@
+/* ==========================================================================
+   WedgeMatrix — Main Stylesheet
+   Golf Launch Monitor Analytics App
+   ========================================================================== */
+
+/* ---------- Color Palette ---------- */
+:root {
+    --golf-green: #2d6a4f;
+    --golf-green-light: #40916c;
+    --golf-green-lighter: #52b788;
+    --golf-green-bg: #d8f3dc;
+    --golf-green-subtle: #f0faf3;
+    --golf-dark: #1b4332;
+    --golf-accent: #b7e4c7;
+    --matrix-header-bg: #2d6a4f;
+    --matrix-header-text: #ffffff;
+    --matrix-cell-bg: #f8fdf9;
+    --errant-bg: #fff3cd;
+    --errant-border: #ffc107;
+    --excluded-bg: #f8f9fa;
+    --excluded-text: #adb5bd;
+}
+
+/* ---------- Base ---------- */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    background-color: #f5f7f5;
+    color: #212529;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* ---------- Navigation ---------- */
+.bg-golf-dark {
+    background-color: var(--golf-dark) !important;
+}
+
+.navbar-brand {
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+}
+
+.nav-link.active {
+    font-weight: 600;
+    border-bottom: 2px solid var(--golf-accent);
+}
+
+/* ---------- Buttons ---------- */
+.btn-golf {
+    background-color: var(--golf-green);
+    border-color: var(--golf-green);
+    color: #fff;
+}
+
+.btn-golf:hover,
+.btn-golf:focus {
+    background-color: var(--golf-dark);
+    border-color: var(--golf-dark);
+    color: #fff;
+}
+
+.btn-outline-golf {
+    color: var(--golf-green);
+    border-color: var(--golf-green);
+}
+
+.btn-outline-golf:hover {
+    background-color: var(--golf-green);
+    color: #fff;
+}
+
+/* ---------- Text Accents ---------- */
+.text-golf {
+    color: var(--golf-green) !important;
+}
+
+/* ---------- Summary Cards (Dashboard) ---------- */
+.summary-card {
+    transition: transform 0.15s ease;
+    border-left: 4px solid var(--golf-green) !important;
+}
+
+.summary-card:hover {
+    transform: translateY(-2px);
+}
+
+.summary-icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+/* ---------- Quick Link Cards ---------- */
+.quick-link-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border-left: 3px solid var(--golf-green-light) !important;
+}
+
+.quick-link-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ---------- Table: Golf Header ---------- */
+.table-golf {
+    background-color: var(--matrix-header-bg) !important;
+    color: var(--matrix-header-text) !important;
+}
+
+.table-golf th {
+    background-color: var(--matrix-header-bg) !important;
+    color: var(--matrix-header-text) !important;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border: none;
+    padding: 0.5rem 0.75rem;
+}
+
+/* ---------- Matrix Tables ---------- */
+.matrix-table {
+    font-size: 0.95rem;
+}
+
+.matrix-table th,
+.matrix-table td {
+    vertical-align: middle;
+}
+
+.matrix-header-club {
+    width: 80px;
+}
+
+.matrix-club-cell {
+    font-size: 0.9rem;
+    color: var(--golf-dark);
+}
+
+.matrix-cell {
+    font-variant-numeric: tabular-nums;
+    min-width: 60px;
+}
+
+.matrix-cell.has-data {
+    background-color: var(--matrix-cell-bg);
+    font-weight: 600;
+}
+
+/* Zebra striping for matrix */
+.matrix-table tbody tr:nth-child(even) {
+    background-color: rgba(45, 106, 79, 0.03);
+}
+
+.matrix-table tbody tr:hover {
+    background-color: var(--golf-green-bg);
+}
+
+/* Wedge matrix: visual divider between fractions and clock-hands */
+.wedge-clock-divider td {
+    border-top: 2px solid var(--golf-green-light) !important;
+}
+
+/* ---------- Shot Data Table ---------- */
+.shot-data-row {
+    transition: background-color 0.15s ease;
+}
+
+/* Excluded shots */
+.excluded-row {
+    background-color: var(--excluded-bg) !important;
+    opacity: 0.65;
+}
+
+.excluded-row td {
+    text-decoration: line-through;
+    color: var(--excluded-text);
+}
+
+.excluded-row td:last-child,
+.excluded-row td:first-child {
+    text-decoration: none;
+}
+
+.excluded-row .badge {
+    text-decoration: none;
+}
+
+/* Errant (auto-flagged) shots */
+.errant-row {
+    background-color: var(--errant-bg) !important;
+    border-left: 3px solid var(--errant-border);
+}
+
+.errant-row:not(.excluded-row) td {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* ---------- Import: Shot Preview ---------- */
+.shot-preview-table .club-group-start td {
+    border-top: 2px solid var(--golf-green-light);
+}
+
+.shot-preview-table tr.selected {
+    background-color: #cfe2ff !important;
+}
+
+.swing-size-badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+.swing-size-badge.assigned {
+    background-color: var(--golf-green-bg);
+    color: var(--golf-dark);
+}
+
+/* ---------- Charts ---------- */
+.card-body canvas {
+    max-height: 320px;
+}
+
+/* ---------- Alerts & Flash ---------- */
+.alert {
+    border-radius: 0.5rem;
+}
+
+/* ---------- Footer ---------- */
+.footer {
+    font-size: 0.85rem;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+    .summary-card .display-6 {
+        font-size: 1.5rem;
+    }
+
+    .matrix-table {
+        font-size: 0.85rem;
+    }
+
+    .matrix-cell {
+        min-width: 50px;
+        padding: 0.35rem;
+    }
+
+    h1.h3 {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand {
+        font-size: 1rem;
+    }
+
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+}
+
+/* ---------- Utility ---------- */
+.font-tabular {
+    font-variant-numeric: tabular-nums;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}

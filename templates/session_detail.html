@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Session {{ session.id }} — Golf Analytics{% endblock %}
+{% block content %}
+<h1>Session: {{ session.filename }}</h1>
+<p>
+    <strong>Date:</strong> {{ session.session_date }} |
+    <strong>Location:</strong> {{ session.location }} |
+    <strong>Type:</strong> {{ session.data_type }} |
+    <strong>Shots:</strong> {{ shots|length }}
+</p>
+{% if session.notes %}<p><em>{{ session.notes }}</em></p>{% endif %}
+
+<div class="mb-3">
+    <a href="/club-matrix?session_id={{ session.id }}" class="btn btn-sm btn-outline-primary">Club Matrix</a>
+    <a href="/wedge-matrix?session_id={{ session.id }}" class="btn btn-sm btn-outline-primary">Wedge Matrix</a>
+    <a href="/shots?session_id={{ session.id }}" class="btn btn-sm btn-outline-primary">All Shots</a>
+</div>
+
+<table class="table table-sm table-bordered table-striped">
+    <thead><tr>
+        <th>Club</th><th>Idx</th><th>Swing</th><th>Ball Spd</th><th>Carry</th><th>Total</th>
+        <th>Offline</th><th>Launch Dir</th><th>Spin</th><th>Dynamic Loft</th><th>Excluded</th>
+    </tr></thead>
+    <tbody>
+    {% for s in shots %}
+    <tr class="{{ 'table-danger' if s.excluded else '' }}">
+        <td>{{ s.club_short }}</td>
+        <td>{{ s.club_index }}</td>
+        <td>{{ s.swing_size }}</td>
+        <td>{{ s.ball_speed }}</td>
+        <td>{{ s.carry }}</td>
+        <td>{{ s.total }}</td>
+        <td>{{ s.offline }}</td>
+        <td>{{ s.launch_direction }}</td>
+        <td>{{ s.spin_rate }}</td>
+        <td>{{ s.dynamic_loft }}</td>
+        <td>{{ '✗' if s.excluded else '✓' }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pocket Card — WedgeMatrix</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/print.css') }}">
+    <style>
+        /* Screen-only preview styling */
+        @media screen {
+            body {
+                background: #e9ecef;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                padding: 2rem;
+            }
+            .print-controls {
+                margin-bottom: 1.5rem;
+                text-align: center;
+            }
+            .print-controls button {
+                padding: 0.5rem 1.5rem;
+                font-size: 1rem;
+                border: none;
+                border-radius: 0.375rem;
+                cursor: pointer;
+                margin: 0 0.25rem;
+            }
+            .print-controls .btn-print {
+                background: #2d6a4f;
+                color: white;
+            }
+            .print-controls .btn-back {
+                background: #6c757d;
+                color: white;
+            }
+            .card-preview {
+                background: white;
+                border: 2px dashed #adb5bd;
+                border-radius: 8px;
+                padding: 1rem;
+                margin-bottom: 1rem;
+            }
+            .card-label {
+                color: #6c757d;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Screen-only controls -->
+    <div class="print-controls no-print">
+        <button class="btn-print" onclick="window.print()">🖨️ Print Pocket Card</button>
+        <button class="btn-back" onclick="history.back()">← Back</button>
+    </div>
+
+    <!-- Card: Club Matrix -->
+    <div class="card-preview no-print">
+        <div class="card-label">Club Matrix (Front)</div>
+    </div>
+    <div class="pocket-card" id="club-card">
+        <div class="card-header-row">
+            <span class="player-name">{{ player_name or 'My Distances' }}</span>
+            <span class="card-date">{{ card_date or '' }}</span>
+        </div>
+        <table class="pocket-table">
+            <thead>
+                <tr>
+                    <th>Club</th>
+                    <th>Carry</th>
+                    <th>Total</th>
+                    <th>Max</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in club_matrix %}
+                <tr>
+                    <td class="club-col">{{ row.club }}</td>
+                    <td>{{ row.carry if row.carry else '' }}</td>
+                    <td>{{ row.total if row.total else '' }}</td>
+                    <td>{{ row.max if row.max else '' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Card: Wedge Matrix -->
+    <div class="card-preview no-print">
+        <div class="card-label">Wedge Matrix (Back)</div>
+    </div>
+    <div class="pocket-card" id="wedge-card">
+        <div class="card-header-row">
+            <span class="player-name">{{ player_name or 'Wedge Distances' }}</span>
+            <span class="card-date">{{ card_date or '' }}</span>
+        </div>
+        <table class="pocket-table">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>AW</th>
+                    <th>SW</th>
+                    <th>LW</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set swing_sizes = ['4/4', '3/4', '2/4', '1/4', '10:2', '10:3', '9:3', '8:4'] %}
+                {% set fraction_sizes = ['4/4', '3/4', '2/4', '1/4'] %}
+
+                {% for size in swing_sizes %}
+                <tr class="{% if size == '10:2' %}clock-divider{% endif %}">
+                    <td class="club-col">{{ size }}</td>
+                    {% for club in ['AW', 'SW', 'LW'] %}
+                    <td>
+                        {% set cell = wedge_matrix.get(size, {}).get(club) %}
+                        {% if cell %}
+                            {% if size in fraction_sizes %}
+                                {{ cell.carry }}
+                            {% else %}
+                                {{ cell.carry }}/{{ cell.max }}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Auto-trigger print if requested via query param
+        if (new URLSearchParams(window.location.search).get('auto') === '1') {
+            window.addEventListener('load', () => setTimeout(() => window.print(), 300));
+        }
+    </script>
+</body>
+</html>

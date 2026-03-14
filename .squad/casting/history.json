@@ -1,0 +1,12 @@
+{
+  "assignments": [
+    {
+      "assignment_id": "wedgematrix-001",
+      "universe": "The Usual Suspects",
+      "created_at": "2026-03-14T03:33:00Z",
+      "agents_assigned": ["Keaton", "Fenster", "McManus", "Hockney"],
+      "capacity_used": 4,
+      "capacity_total": 6
+    }
+  ]
+}
