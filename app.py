@@ -241,9 +241,13 @@ def register_routes(app):
     def analytics():
         session_id = request.args.get('session_id', type=int)
         sessions = Session.query.order_by(Session.session_date.desc()).all()
+        has_data = Shot.query.filter(Shot.excluded == False).count() > 0
+        clubs = [r[0] for r in db.session.query(Shot.club_short).distinct().order_by(Shot.club_short).all()]
         return render_template('analytics.html',
                                sessions=sessions,
-                               current_session_id=session_id)
+                               current_session_id=session_id,
+                               has_data=has_data,
+                               clubs=clubs)
 
     # ──────────────────────────────────────────────
     # Print routes
@@ -294,7 +298,7 @@ def register_routes(app):
         shot = Shot.query.get_or_404(shot_id)
         shot.excluded = not shot.excluded
         db.session.commit()
-        return jsonify({'id': shot.id, 'excluded': shot.excluded})
+        return jsonify({'success': True, 'id': shot.id, 'excluded': shot.excluded})
 
     @app.route('/shots/batch-exclude', methods=['POST'])
     def batch_exclude():
@@ -303,17 +307,21 @@ def register_routes(app):
             return jsonify({'error': 'No JSON body'}), 400
 
         shot_ids = data.get('shot_ids', [])
-        action = data.get('action', 'exclude')  # 'exclude' or 'include'
+        # Support both 'exclude' (bool) and 'action' (string) from frontend
+        if 'exclude' in data:
+            exclude_val = bool(data['exclude'])
+        else:
+            action = data.get('action', 'exclude')
+            exclude_val = action == 'exclude'
 
         if not shot_ids:
             return jsonify({'error': 'No shot IDs provided'}), 400
 
-        exclude_val = action == 'exclude'
         Shot.query.filter(Shot.id.in_(shot_ids)).update(
             {'excluded': exclude_val}, synchronize_session='fetch'
         )
         db.session.commit()
-        return jsonify({'updated': len(shot_ids), 'excluded': exclude_val})
+        return jsonify({'success': True, 'updated': len(shot_ids), 'excluded': exclude_val})
 
     # ──────────────────────────────────────────────
     # JSON API routes
@@ -345,7 +353,32 @@ def register_routes(app):
         elif chart_type == 'shot-shape':
             return jsonify(shot_shape_data(session_id=session_id, club_short=club))
         elif chart_type == 'carry-distribution':
-            return jsonify(carry_distribution(session_id=session_id, club_short=club))
+            raw = carry_distribution(session_id=session_id, club_short=club)
+            flat = []
+            for club_name, stats in raw.items():
+                for v in stats['values']:
+                    flat.append({'club': club_name, 'carry': v})
+            return jsonify(flat)
+        elif chart_type == 'loft-trend':
+            raw = analyze_loft(session_id=session_id, club_short=club)
+            result = [
+                {'club': r['club_short'], 'dynamic_loft': r['dynamic_loft']}
+                for r in raw if r['dynamic_loft'] is not None
+            ]
+            return jsonify(result)
+        elif chart_type == 'club-comparison':
+            stats = per_club_statistics(session_id=session_id)
+            result = []
+            for c in CLUB_ORDER:
+                if c in stats:
+                    result.append({
+                        'club': c,
+                        'carry_p75': stats[c]['carry_pct'],
+                        'total_p75': stats[c]['total_pct'],
+                        'max_total': stats[c]['max_total'],
+                        'shot_count': stats[c]['shot_count'],
+                    })
+            return jsonify(result)
         elif chart_type == 'loft-analysis':
             return jsonify(analyze_loft(session_id=session_id, club_short=club))
         elif chart_type == 'loft-summary':

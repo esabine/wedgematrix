@@ -43,10 +43,12 @@ function destroyChart(id) {
 function loadAnalytics() {
     var sessionEl = document.getElementById('analytics-session');
     var clubEl = document.getElementById('analytics-club');
+    var dateRangeEl = document.getElementById('analytics-date-range');
     var sessionId = sessionEl ? sessionEl.value : '';
     var clubFilter = clubEl ? clubEl.value : '';
+    var dateRange = dateRangeEl ? dateRangeEl.value : '';
 
-    var qs = buildQueryString({ session_id: sessionId, club: clubFilter });
+    var qs = buildQueryString({ session_id: sessionId, club: clubFilter, date_range: dateRange });
 
     Promise.all([
         fetch('/api/analytics/carry-distribution' + qs).then(handleResponse),
@@ -74,7 +76,7 @@ function loadAnalytics() {
 }
 
 function handleResponse(response) {
-    if (!response.ok) return [];
+    if (!response.ok) return {};
     return response.json();
 }
 
@@ -91,28 +93,16 @@ function buildQueryString(params) {
 /* ---------- Carry Distance Distribution ---------- */
 function initCarryDistribution(data) {
     var canvas = document.getElementById('chart-carry-distribution');
-    if (!canvas || !data || !data.length) return;
+    if (!canvas || !data || typeof data !== 'object') return;
     destroyChart('carry-distribution');
 
-    var clubs = {};
-    data.forEach(function (d) {
-        if (!clubs[d.club]) clubs[d.club] = [];
-        clubs[d.club].push(d.carry);
-    });
+    // Backend returns {club: {values, min, q1, median, q3, max, count}}
+    var labels = Object.keys(data);
+    if (!labels.length) return;
 
-    var labels = Object.keys(clubs);
-    var avgData = labels.map(function (c) {
-        var vals = clubs[c].sort(function (a, b) { return a - b; });
-        return vals[Math.floor(vals.length * 0.5)] || 0;
-    });
-    var p25Data = labels.map(function (c) {
-        var vals = clubs[c].sort(function (a, b) { return a - b; });
-        return vals[Math.floor(vals.length * 0.25)] || 0;
-    });
-    var p75Data = labels.map(function (c) {
-        var vals = clubs[c].sort(function (a, b) { return a - b; });
-        return vals[Math.floor(vals.length * 0.75)] || 0;
-    });
+    var medianData = labels.map(function (c) { return data[c].median || 0; });
+    var q1Data = labels.map(function (c) { return data[c].q1 || 0; });
+    var q3Data = labels.map(function (c) { return data[c].q3 || 0; });
 
     chartInstances['carry-distribution'] = new Chart(canvas, {
         type: 'bar',
@@ -121,21 +111,21 @@ function initCarryDistribution(data) {
             datasets: [
                 {
                     label: 'P25',
-                    data: p25Data,
+                    data: q1Data,
                     backgroundColor: 'rgba(45, 106, 79, 0.3)',
                     borderColor: 'rgba(45, 106, 79, 0.5)',
                     borderWidth: 1,
                 },
                 {
                     label: 'Median',
-                    data: avgData,
+                    data: medianData,
                     backgroundColor: GOLF_COLORS.green,
                     borderColor: 'rgba(45, 106, 79, 1)',
                     borderWidth: 1,
                 },
                 {
                     label: 'P75',
-                    data: p75Data,
+                    data: q3Data,
                     backgroundColor: GOLF_COLORS.greenLight,
                     borderColor: 'rgba(64, 145, 108, 1)',
                     borderWidth: 1,
@@ -159,13 +149,18 @@ function initCarryDistribution(data) {
 /* ---------- Dispersion Pattern ---------- */
 function initDispersionChart(data) {
     var canvas = document.getElementById('chart-dispersion');
-    if (!canvas || !data || !data.length) return;
+    if (!canvas) return;
     destroyChart('dispersion');
 
+    // Handle both array and empty object
+    var items = Array.isArray(data) ? data : [];
+    if (!items.length) return;
+
     var clubMap = {};
-    data.forEach(function (d) {
-        if (!clubMap[d.club]) clubMap[d.club] = [];
-        clubMap[d.club].push({ x: d.offline, y: d.carry });
+    items.forEach(function (d) {
+        var club = d.club || d.club_short;
+        if (!clubMap[club]) clubMap[club] = [];
+        clubMap[club].push({ x: d.offline, y: d.carry });
     });
 
     var datasets = Object.keys(clubMap).map(function (club, i) {
@@ -212,13 +207,17 @@ function initDispersionChart(data) {
 /* ---------- Spin Rate vs Carry ---------- */
 function initSpinChart(data) {
     var canvas = document.getElementById('chart-spin');
-    if (!canvas || !data || !data.length) return;
+    if (!canvas) return;
     destroyChart('spin');
 
+    var items = Array.isArray(data) ? data : [];
+    if (!items.length) return;
+
     var clubMap = {};
-    data.forEach(function (d) {
-        if (!clubMap[d.club]) clubMap[d.club] = [];
-        clubMap[d.club].push({ x: d.carry, y: d.spin_rate });
+    items.forEach(function (d) {
+        var club = d.club || d.club_short;
+        if (!clubMap[club]) clubMap[club] = [];
+        clubMap[club].push({ x: d.carry, y: d.spin_rate });
     });
 
     var datasets = Object.keys(clubMap).map(function (club, i) {
@@ -259,13 +258,20 @@ function initSpinChart(data) {
 /* ---------- Dynamic Loft Trend ---------- */
 function initLoftTrend(data) {
     var canvas = document.getElementById('chart-loft-trend');
-    if (!canvas || !data || !data.length) return;
+    if (!canvas) return;
     destroyChart('loft-trend');
 
+    // Backend returns [{id, club_short, dynamic_loft, standard_loft, loft_diff, status}]
+    var items = Array.isArray(data) ? data : [];
+    if (!items.length) return;
+
     var clubMap = {};
-    data.forEach(function (d) {
-        if (!clubMap[d.club]) clubMap[d.club] = [];
-        clubMap[d.club].push(d.dynamic_loft);
+    items.forEach(function (d) {
+        var club = d.club || d.club_short;
+        if (d.dynamic_loft != null) {
+            if (!clubMap[club]) clubMap[club] = [];
+            clubMap[club].push(d.dynamic_loft);
+        }
     });
 
     var maxLen = Math.max.apply(null, Object.values(clubMap).map(function (a) { return a.length; }));
@@ -300,10 +306,13 @@ function initLoftTrend(data) {
 /* ---------- Shot Shape Analysis ---------- */
 function initShotShape(data) {
     var canvas = document.getElementById('chart-shot-shape');
-    if (!canvas || !data || !data.length) return;
+    if (!canvas) return;
     destroyChart('shot-shape');
 
-    var points = data.map(function (d) {
+    var items = Array.isArray(data) ? data : [];
+    if (!items.length) return;
+
+    var points = items.map(function (d) {
         return { x: d.club_path, y: d.face_angle };
     });
 
@@ -378,10 +387,13 @@ function initShotShape(data) {
 /* ---------- Club Comparison ---------- */
 function initClubComparison(data) {
     var canvas = document.getElementById('chart-club-comparison');
-    if (!canvas || !data || !data.length) return;
+    if (!canvas) return;
     destroyChart('club-comparison');
 
-    var labels = data.map(function (d) { return d.club; });
+    var items = Array.isArray(data) ? data : [];
+    if (!items.length) return;
+
+    var labels = items.map(function (d) { return d.club; });
 
     chartInstances['club-comparison'] = new Chart(canvas, {
         type: 'bar',
@@ -390,21 +402,21 @@ function initClubComparison(data) {
             datasets: [
                 {
                     label: 'Carry (P75)',
-                    data: data.map(function (d) { return d.carry_p75; }),
+                    data: items.map(function (d) { return d.carry_p75; }),
                     backgroundColor: GOLF_COLORS.green,
                     borderColor: 'rgba(45, 106, 79, 1)',
                     borderWidth: 1,
                 },
                 {
                     label: 'Total (P75)',
-                    data: data.map(function (d) { return d.total_p75; }),
+                    data: items.map(function (d) { return d.total_p75; }),
                     backgroundColor: GOLF_COLORS.blue,
                     borderColor: 'rgba(54, 162, 235, 1)',
                     borderWidth: 1,
                 },
                 {
                     label: 'Max Total',
-                    data: data.map(function (d) { return d.max_total; }),
+                    data: items.map(function (d) { return d.max_total; }),
                     backgroundColor: GOLF_COLORS.orange,
                     borderColor: 'rgba(255, 159, 64, 1)',
                     borderWidth: 1,

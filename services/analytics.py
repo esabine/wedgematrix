@@ -124,7 +124,7 @@ def dispersion_data(session_id=None, club_short=None):
         session_id=session_id, club_short=club_short, excluded=False
     ).all()
     return [
-        {'carry': s.carry, 'offline': s.offline, 'club_short': s.club_short}
+        {'carry': s.carry, 'offline': s.offline, 'club': s.club_short, 'club_short': s.club_short}
         for s in shots
         if s.carry is not None and s.offline is not None
     ]
@@ -136,7 +136,7 @@ def spin_vs_carry_data(session_id=None, club_short=None):
         session_id=session_id, club_short=club_short, excluded=False
     ).all()
     return [
-        {'carry': s.carry, 'spin_rate': s.spin_rate, 'club_short': s.club_short}
+        {'carry': s.carry, 'spin_rate': s.spin_rate, 'club': s.club_short, 'club_short': s.club_short}
         for s in shots
         if s.carry is not None and s.spin_rate is not None
     ]
@@ -151,6 +151,7 @@ def shot_shape_data(session_id=None, club_short=None):
         {
             'face_angle': s.face_angle,
             'club_path': s.club_path,
+            'club': s.club_short,
             'club_short': s.club_short,
             'diff': round(s.face_angle - s.club_path, 1) if s.face_angle is not None and s.club_path is not None else None,
         }
