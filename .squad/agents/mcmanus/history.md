@@ -15,26 +15,26 @@
 - Base layout (`templates/base.html`): Bootstrap 5.3.3 CDN + Bootstrap Icons + Chart.js 4.4.7 CDN. No build step.
 - Color palette anchored on `--golf-green: #2d6a4f` with CSS custom properties in `style.css` for consistency.
 - Navigation uses `request.endpoint` matching for active-state highlighting.
-- Print is a first-class citizen: `print.css` loaded with `media="print"`, pocket cards use `@page { size: 3.5in 2in }`.
+- Print is a first-class citizen: `print.css` loaded with `media="print"`, pocket cards use `@page { size: 2in 3.5in }` (portrait).
 
 **Templates (9 files):**
 - `base.html` — nav, flash messages, content block, footer
 - `dashboard.html` — summary cards, quick links, recent sessions
 - `import.html` — file upload → parsed preview table → swing size batch-tagging (wedge data)
 - `sessions.html` — session list with Bootstrap modal delete confirmation
-- `shots.html` — filterable table with AJAX exclude toggles, batch select, errant/excluded row styling
+- `shots.html` — filterable table with AJAX exclude toggles, batch select, club toggle buttons, errant/excluded row styling
 - `club_matrix.html` — Club | Carry | Total | Max with percentile + session scope selectors
 - `wedge_matrix.html` — Swing Size | AW | SW | LW, fraction=carry-only, clock-hand=carry/max
 - `print_card.html` — standalone print page (no base.html), both matrices on one card
-- `analytics.html` — 6 chart containers with session + club filters
+- `analytics.html` — 6 chart containers with session + club + temporal date range filters
 
 **CSS (2 files):**
-- `style.css` — full design system: `.btn-golf`, `.table-golf`, `.excluded-row`, `.errant-row`, `.matrix-cell.has-data`, responsive breakpoints
-- `print.css` — pocket card sizing (3.5"×2"), `@media print` hide rules, high-contrast table headers
+- `style.css` — full design system: `.btn-golf`, `.table-golf`, `.excluded-row`, `.errant-row`, `.matrix-cell.has-data`, `.shot-data-table` compact styling, `.club-toggle-btn`, responsive breakpoints
+- `print.css` — pocket card sizing (2"×3.5" portrait), `@media print` hide rules, high-contrast table headers
 
 **JS (3 files):**
-- `app.js` — flash auto-dismiss, matrix control reload (percentile/session), AJAX shot exclude toggle, batch select/exclude, delete confirmation modal
-- `charts.js` — 6 Chart.js functions: carry distribution, dispersion scatter, spin vs carry, loft trend, shot shape (with crosshairs plugin), club comparison. Golf color palette. Instances tracked for cleanup.
+- `app.js` — flash auto-dismiss, matrix control reload (percentile/session), AJAX shot exclude toggle, batch select/exclude, delete confirmation modal, club toggle buttons with client-side filtering
+- `charts.js` — 6 Chart.js functions: carry distribution, dispersion scatter, spin vs carry, loft trend, shot shape (with crosshairs plugin), club comparison. Golf color palette. Instances tracked for cleanup. Temporal date_range param support.
 - `import.js` — swing size batch-tagging: checkbox + shift-click row selection, assign dropdown, save validation (all wedge shots must have sizes)
 
 **Key decisions:**
@@ -43,10 +43,26 @@
 - Charts load all 6 endpoints in parallel via `Promise.all`
 - Swing size tagging uses hidden inputs per row, validated on form submit
 - `print_card.html` does NOT extend `base.html` — completely standalone for clean print output
+- Club filter uses toggle buttons (client-side row visibility), not a dropdown
+- Shot table uses 0.8rem font + abbreviated headers to fit 19 columns without horizontal scroll pain
 
-**API endpoints assumed (Fenster to build):**
+**API endpoints (all working):**
 - `/api/analytics/carry-distribution`, `/api/analytics/dispersion`, `/api/analytics/spin-carry`
 - `/api/analytics/loft-trend`, `/api/analytics/shot-shape`, `/api/analytics/club-comparison`
-- `/shots/<id>/toggle-exclude` (POST → JSON), `/shots/batch-exclude` (POST → JSON)
+- `/shots/<id>/toggle-exclude` (POST → JSON with `success`), `/shots/batch-exclude` (POST → JSON with `success`)
 - `/import/upload` (POST multipart), `/import/save` (POST form)
 - `/sessions/<id>/delete` (POST)
+
+### 2026-03-15 — Bug Fix Round
+
+**Analytics charts were blank:** Root causes — (1) analytics route didn't pass `has_data` or `clubs` to template, so `loadAnalytics()` never ran. (2) Backend `carry_distribution()` returns a dict keyed by club, but JS expected an array. (3) Backend returns `club_short` but JS referenced `d.club`. (4) No `loft-trend` or `club-comparison` API endpoints existed. Fixed all mappings and added missing endpoints.
+
+**Temporal filter controls added:** Bootstrap btn-group with radio buttons (7d/30d/60d/90d/All). Selecting one auto-refreshes charts, passing `date_range` query param for backend filtering.
+
+**Shot table expanded:** Added Swing Size, L.Dir, Back Spin, Side Spin, Ball Speed, Apex, Landing Angle, Club Path, Face Angle, Attack Angle columns. Used 0.8rem font with abbreviated headers. Excluded column replaces verbose Status column.
+
+**Club toggle buttons:** Replaced dropdown with 14 toggle buttons + All. Client-side row visibility filtering — instant, no server round-trip.
+
+**Batch exclude/include fixed:** Backend wasn't returning `success` field. JS was sending `exclude` (bool) but backend expected `action` (string). Fixed both sides. Select-all now respects club-toggle visibility.
+
+**Pocket card portrait:** Changed from 3.5"×2" landscape to 2"×3.5" portrait. Tightened fonts/padding to fit narrower width.
