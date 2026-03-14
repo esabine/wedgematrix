@@ -1,4 +1,5 @@
 import os
+from datetime import date, timedelta
 from flask import (
     Flask, render_template, request, redirect, url_for,
     flash, jsonify, send_from_directory
@@ -15,6 +16,22 @@ from services.analytics import (
 from services.club_matrix import build_club_matrix, CLUB_ORDER
 from services.wedge_matrix import build_wedge_matrix, SWING_SIZES
 from services.loft_analysis import analyze_loft, loft_summary
+
+DATE_RANGE_DAYS = {'7': 7, '30': 30, '60': 60, '90': 90}
+DATE_RANGE_OPTIONS = [
+    ('7', 'Last week'),
+    ('30', 'Last 30 days'),
+    ('60', 'Last 60 days'),
+    ('90', 'Last 90 days'),
+    ('', 'All time'),
+]
+
+
+def parse_date_range(value):
+    """Convert a date_range query param to a date cutoff, or None for all time."""
+    if value and value in DATE_RANGE_DAYS:
+        return date.today() - timedelta(days=DATE_RANGE_DAYS[value])
+    return None
 
 
 def create_app():
@@ -229,17 +246,23 @@ def register_routes(app):
             s.standard_loft = lofts.get(s.club_short)
             s.errant = False  # errant flagging is computed on demand, not stored
 
+        # Clubs that have data (for toggle buttons)
+        all_possible_clubs = CLUB_ORDER
+
         return render_template('shots.html',
                                shots=shot_list,
                                sessions=all_sessions,
                                clubs=clubs,
+                               all_possible_clubs=all_possible_clubs,
                                selected_session=session_id,
                                selected_club=club,
+                               selected_clubs=clubs,
                                selected_swing_size=swing_size)
 
     @app.route('/analytics')
     def analytics():
         session_id = request.args.get('session_id', type=int)
+        date_range = request.args.get('date_range', '')
         sessions = Session.query.order_by(Session.session_date.desc()).all()
         has_data = Shot.query.filter(Shot.excluded == False).count() > 0
         clubs = [r[0] for r in db.session.query(Shot.club_short).distinct().order_by(Shot.club_short).all()]
@@ -247,7 +270,9 @@ def register_routes(app):
                                sessions=sessions,
                                current_session_id=session_id,
                                has_data=has_data,
-                               clubs=clubs)
+                               clubs=clubs,
+                               date_range=date_range,
+                               date_range_options=DATE_RANGE_OPTIONS)
 
     # ──────────────────────────────────────────────
     # Print routes

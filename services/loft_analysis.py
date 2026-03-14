@@ -61,7 +61,7 @@ def club_loft_summary(session_id, club_short):
     }
 
 
-def analyze_loft(session_id=None, club_short=None):
+def analyze_loft(session_id=None, club_short=None, date_from=None):
     """Compare dynamic loft to standard loft for each shot.
 
     Good: dynamic_loft <= standard_loft (compression)
@@ -69,9 +69,12 @@ def analyze_loft(session_id=None, club_short=None):
 
     Returns list of shot dicts with loft_status added.
     """
+    from models.database import Session as SessionModel
     lofts = {cl.club_short: cl.standard_loft for cl in ClubLoft.query.all()}
 
     q = Shot.query.filter(Shot.excluded == False)
+    if date_from is not None:
+        q = q.join(SessionModel).filter(SessionModel.session_date >= date_from)
     if session_id is not None:
         q = q.filter(Shot.session_id == session_id)
     if club_short is not None:
@@ -100,12 +103,12 @@ def analyze_loft(session_id=None, club_short=None):
     return results
 
 
-def loft_summary(session_id=None):
+def loft_summary(session_id=None, date_from=None):
     """Per-club summary: % of shots with good dynamic loft.
 
     Returns dict: {club_short: {'good': N, 'bad': N, 'total': N, 'pct_good': float}}
     """
-    analysis = analyze_loft(session_id=session_id)
+    analysis = analyze_loft(session_id=session_id, date_from=date_from)
 
     by_club = {}
     for shot in analysis:

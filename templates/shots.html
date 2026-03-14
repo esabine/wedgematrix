@@ -24,15 +24,6 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label form-label-sm mb-1">Club</label>
-                <select name="club" class="form-select form-select-sm" id="filter-club">
-                    <option value="">All Clubs</option>
-                    {% for club in clubs %}
-                    <option value="{{ club }}" {% if selected_club == club %}selected{% endif %}>{{ club }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-2">
                 <label class="form-label form-label-sm mb-1">Swing Size</label>
                 <select name="swing_size" class="form-select form-select-sm" id="filter-swing-size">
                     <option value="">All Sizes</option>
@@ -53,6 +44,25 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Club Toggle Buttons -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <label class="form-label form-label-sm mb-1 d-block">Clubs</label>
+        <div class="d-flex flex-wrap gap-1" id="club-toggle-group">
+            <button type="button" class="btn btn-sm btn-golf club-toggle-all" id="club-toggle-all-btn">All</button>
+            {% set all_clubs = ['1W','3W','2H','3H','4i','5i','6i','7i','8i','9i','PW','AW','SW','LW'] %}
+            {% for club in all_clubs %}
+            <button type="button"
+                    class="btn btn-sm club-toggle-btn {% if not selected_clubs or club in selected_clubs %}btn-golf{% else %}btn-outline-secondary{% endif %}"
+                    data-club="{{ club }}"
+                    data-active="{% if not selected_clubs or club in selected_clubs %}1{% else %}0{% endif %}">
+                {{ club }}
+            </button>
+            {% endfor %}
+        </div>
     </div>
 </div>
 

@@ -48,7 +48,7 @@ def get_shots_query(session_id=None, club_short=None, swing_size=None, excluded=
     return q
 
 
-def club_stats(session_id=None, club_short=None, percentile=75):
+def club_stats(session_id=None, club_short=None, percentile=75, date_from=None):
     """Compute carry, total, and max for a specific club.
 
     Returns dict with carry_pct, total_pct, max_total, shot_count.
@@ -56,7 +56,8 @@ def club_stats(session_id=None, club_short=None, percentile=75):
     shots = get_shots_query(
         session_id=session_id,
         club_short=club_short,
-        excluded=False
+        excluded=False,
+        date_from=date_from,
     ).all()
 
     carries = [s.carry for s in shots if s.carry is not None]
@@ -70,17 +71,19 @@ def club_stats(session_id=None, club_short=None, percentile=75):
     }
 
 
-def per_club_statistics(session_id=None, percentile=75):
+def per_club_statistics(session_id=None, percentile=75, date_from=None):
     """Compute stats for every club that has data."""
     # Get distinct clubs in data
     q = Shot.query.with_entities(Shot.club_short).distinct()
     if session_id is not None:
         q = q.filter(Shot.session_id == session_id)
+    if date_from is not None:
+        q = q.join(Session).filter(Session.session_date >= date_from)
     clubs = [row[0] for row in q.all()]
 
     results = {}
     for c in clubs:
-        results[c] = club_stats(session_id=session_id, club_short=c, percentile=percentile)
+        results[c] = club_stats(session_id=session_id, club_short=c, percentile=percentile, date_from=date_from)
     return results
 
 
@@ -121,10 +124,10 @@ def flag_errant_shots(session_id, club_short=None, low_pct=10, high_pct=90):
     return flagged_ids
 
 
-def dispersion_data(session_id=None, club_short=None):
+def dispersion_data(session_id=None, club_short=None, date_from=None):
     """Get offline vs carry data for dispersion chart."""
     shots = get_shots_query(
-        session_id=session_id, club_short=club_short, excluded=False
+        session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
     ).all()
     return [
         {'carry': s.carry, 'offline': s.offline, 'club': s.club_short, 'club_short': s.club_short}
@@ -133,10 +136,10 @@ def dispersion_data(session_id=None, club_short=None):
     ]
 
 
-def spin_vs_carry_data(session_id=None, club_short=None):
+def spin_vs_carry_data(session_id=None, club_short=None, date_from=None):
     """Get spin rate vs carry data."""
     shots = get_shots_query(
-        session_id=session_id, club_short=club_short, excluded=False
+        session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
     ).all()
     return [
         {'carry': s.carry, 'spin_rate': s.spin_rate, 'club': s.club_short, 'club_short': s.club_short}
@@ -145,10 +148,10 @@ def spin_vs_carry_data(session_id=None, club_short=None):
     ]
 
 
-def shot_shape_data(session_id=None, club_short=None):
+def shot_shape_data(session_id=None, club_short=None, date_from=None):
     """Get face angle vs club path for shot shape analysis."""
     shots = get_shots_query(
-        session_id=session_id, club_short=club_short, excluded=False
+        session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
     ).all()
     return [
         {
@@ -186,10 +189,10 @@ def per_club_stats(session_id, club_short):
     }
 
 
-def carry_distribution(session_id=None, club_short=None):
+def carry_distribution(session_id=None, club_short=None, date_from=None):
     """Get carry distances grouped by club for box plot / histogram."""
     shots = get_shots_query(
-        session_id=session_id, club_short=club_short, excluded=False
+        session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
     ).all()
 
     by_club = {}

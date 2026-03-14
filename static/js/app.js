@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function () {
     initShotExclusionToggles();
     initBatchSelectExclude();
     initDeleteConfirmation();
+    initClubToggleButtons();
 });
 
 /* ---------- Flash Message Auto-Dismiss ---------- */
@@ -180,4 +181,94 @@ function initDeleteConfirmation() {
             modal.show();
         });
     });
+}
+
+/* ---------- Club Toggle Buttons (Shots page) ---------- */
+function initClubToggleButtons() {
+    var toggleGroup = document.getElementById('club-toggle-group');
+    if (!toggleGroup) return;
+
+    var buttons = toggleGroup.querySelectorAll('.club-toggle-btn');
+    var allBtn = document.getElementById('club-toggle-all-btn');
+    var table = document.getElementById('shots-table');
+
+    if (!table) return;
+
+    function getActiveClubs() {
+        var active = [];
+        buttons.forEach(function (b) {
+            if (b.getAttribute('data-active') === '1') {
+                active.push(b.getAttribute('data-club'));
+            }
+        });
+        return active;
+    }
+
+    function applyFilter() {
+        var activeClubs = getActiveClubs();
+        var rows = table.querySelectorAll('tbody .shot-data-row');
+        var visibleCount = 0;
+
+        rows.forEach(function (row) {
+            var clubCell = row.querySelectorAll('td')[1];
+            if (!clubCell) return;
+            var club = clubCell.textContent.trim();
+            if (activeClubs.length === 0 || activeClubs.indexOf(club) !== -1) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        var countEl = document.getElementById('shot-count');
+        if (countEl) {
+            countEl.textContent = visibleCount + ' shots';
+        }
+
+        // Update All button style
+        if (allBtn) {
+            if (activeClubs.length === buttons.length) {
+                allBtn.classList.remove('btn-outline-secondary');
+                allBtn.classList.add('btn-golf');
+            } else {
+                allBtn.classList.remove('btn-golf');
+                allBtn.classList.add('btn-outline-secondary');
+            }
+        }
+    }
+
+    buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var isActive = this.getAttribute('data-active') === '1';
+            if (isActive) {
+                this.setAttribute('data-active', '0');
+                this.classList.remove('btn-golf');
+                this.classList.add('btn-outline-secondary');
+            } else {
+                this.setAttribute('data-active', '1');
+                this.classList.remove('btn-outline-secondary');
+                this.classList.add('btn-golf');
+            }
+            applyFilter();
+        });
+    });
+
+    if (allBtn) {
+        allBtn.addEventListener('click', function () {
+            var allActive = getActiveClubs().length === buttons.length;
+            buttons.forEach(function (btn) {
+                if (allActive) {
+                    btn.setAttribute('data-active', '0');
+                    btn.classList.remove('btn-golf');
+                    btn.classList.add('btn-outline-secondary');
+                } else {
+                    btn.setAttribute('data-active', '1');
+                    btn.classList.remove('btn-outline-secondary');
+                    btn.classList.add('btn-golf');
+                }
+            });
+            applyFilter();
+        });
+    }
 }

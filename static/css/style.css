@@ -287,6 +287,20 @@ main {
     }
 }
 
+/* ---------- Club Toggle Buttons ---------- */
+.club-toggle-btn {
+    min-width: 38px;
+    font-weight: 600;
+    font-size: 0.78rem;
+    padding: 0.2rem 0.45rem;
+}
+
+.club-toggle-all {
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 0.2rem 0.6rem;
+}
+
 /* ---------- Utility ---------- */
 .font-tabular {
     font-variant-numeric: tabular-nums;
