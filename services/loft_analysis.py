@@ -1,6 +1,66 @@
 from models.database import db, Shot, ClubLoft
 
 
+def assess_loft(dynamic_loft, club_short):
+    """Assess a single shot's dynamic loft against the standard loft for the club.
+
+    Returns dict with 'is_good', 'difference', 'dynamic_loft', 'standard_loft'.
+    """
+    club_loft = ClubLoft.query.filter_by(club_short=club_short).first()
+    std_loft = club_loft.standard_loft if club_loft else None
+
+    if dynamic_loft is None or std_loft is None:
+        return {
+            'is_good': None,
+            'difference': None,
+            'dynamic_loft': dynamic_loft,
+            'standard_loft': std_loft,
+        }
+
+    diff = round(dynamic_loft - std_loft, 1)
+    return {
+        'is_good': dynamic_loft <= std_loft,
+        'difference': diff,
+        'dynamic_loft': dynamic_loft,
+        'standard_loft': std_loft,
+    }
+
+
+def club_loft_summary(session_id, club_short):
+    """Per-club loft summary for a specific session and club.
+
+    Returns dict with 'total_shots', 'good_shots', 'bad_shots', 'good_pct'.
+    """
+    club_loft = ClubLoft.query.filter_by(club_short=club_short).first()
+    std_loft = club_loft.standard_loft if club_loft else None
+
+    q = Shot.query.filter(
+        Shot.excluded == False,
+        Shot.session_id == session_id,
+        Shot.club_short == club_short,
+        Shot.dynamic_loft.isnot(None),
+    )
+    shots = q.all()
+
+    good = 0
+    bad = 0
+    for s in shots:
+        if std_loft is not None and s.dynamic_loft <= std_loft:
+            good += 1
+        else:
+            bad += 1
+
+    total = good + bad
+    pct = round(100.0 * good / total, 1) if total > 0 else 0.0
+
+    return {
+        'total_shots': total,
+        'good_shots': good,
+        'bad_shots': bad,
+        'good_pct': pct,
+    }
+
+
 def analyze_loft(session_id=None, club_short=None):
     """Compare dynamic loft to standard loft for each shot.
 

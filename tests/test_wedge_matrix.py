@@ -35,13 +35,13 @@ class TestWedgeMatrixClubs:
 
         # Columns should be AW, SW, LW only
         clubs_in_matrix = set()
-        for row in matrix:
-            for club in row.get('clubs', {}).keys():
-                clubs_in_matrix.add(club)
-        # Alternative: if matrix is a dict keyed by swing_size
         if isinstance(matrix, dict):
             for swing, clubs in matrix.items():
                 for club in clubs.keys():
+                    clubs_in_matrix.add(club)
+        else:
+            for row in matrix:
+                for club in row.get('clubs', {}).keys():
                     clubs_in_matrix.add(club)
 
         assert 'PW' not in clubs_in_matrix

@@ -13,6 +13,21 @@ def percentile_value(values, percentile):
     return float(np.percentile(clean, percentile))
 
 
+# Alias used by tests
+compute_percentile = percentile_value
+
+
+def compute_percentile_for_club(session_id, club_short, percentile):
+    """Compute a carry percentile for a specific club, excluding excluded shots."""
+    shots = Shot.query.filter(
+        Shot.session_id == session_id,
+        Shot.club_short == club_short,
+        Shot.excluded == False,
+    ).all()
+    carries = [s.carry for s in shots if s.carry is not None]
+    return percentile_value(carries, percentile)
+
+
 def get_shots_query(session_id=None, club_short=None, swing_size=None, excluded=False):
     """Build a base shot query with common filters.
 
@@ -66,21 +81,27 @@ def per_club_statistics(session_id=None, percentile=75):
     return results
 
 
-def flag_errant_shots(session_id, low_pct=10, high_pct=90):
+def flag_errant_shots(session_id, club_short=None, low_pct=10, high_pct=90):
     """Auto-flag shots with carry outside P10-P90 range per club.
 
-    Returns list of shot IDs that were flagged. Does not commit — caller decides.
+    If club_short is provided, only flag shots for that club.
+    Returns list of shot IDs that were flagged. Does not commit.
     """
     flagged_ids = []
 
-    clubs = Shot.query.with_entities(Shot.club_short).filter(
-        Shot.session_id == session_id
-    ).distinct().all()
+    if club_short:
+        club_list = [club_short]
+    else:
+        club_list = [
+            row[0] for row in Shot.query.with_entities(Shot.club_short).filter(
+                Shot.session_id == session_id
+            ).distinct().all()
+        ]
 
-    for (club_short,) in clubs:
+    for cs in club_list:
         shots = Shot.query.filter(
             Shot.session_id == session_id,
-            Shot.club_short == club_short,
+            Shot.club_short == cs,
         ).all()
 
         carries = [s.carry for s in shots if s.carry is not None]
@@ -136,6 +157,29 @@ def shot_shape_data(session_id=None, club_short=None):
         for s in shots
         if s.face_angle is not None and s.club_path is not None
     ]
+
+
+def per_club_stats(session_id, club_short):
+    """Aggregate stats for a specific club in a session.
+
+    Returns dict with count, min_carry, max_carry, mean_carry.
+    """
+    shots = Shot.query.filter(
+        Shot.session_id == session_id,
+        Shot.club_short == club_short,
+        Shot.excluded == False,
+    ).all()
+
+    carries = [s.carry for s in shots if s.carry is not None]
+    if not carries:
+        return {'count': 0, 'min_carry': None, 'max_carry': None, 'mean_carry': None}
+
+    return {
+        'count': len(carries),
+        'min_carry': min(carries),
+        'max_carry': max(carries),
+        'mean_carry': float(np.mean(carries)),
+    }
 
 
 def carry_distribution(session_id=None, club_short=None):

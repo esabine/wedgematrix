@@ -77,7 +77,7 @@ class TestPerClubGoodPercentage:
         from services.loft_analysis import club_loft_summary
 
         with app.app_context():
-            for i, dl in enumerate([35.0, 38.0, 40.0]):
+            for i, dl in enumerate([36.0, 38.0, 40.0]):
                 db.session.add(_make_shot(
                     sample_session.id, '8 Iron', '8i', 130.0, 140.0,
                     dynamic_loft=dl, club_index=i))

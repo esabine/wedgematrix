@@ -46,6 +46,7 @@ def build_club_matrix(session_id=None, percentile=75):
 
         matrix.append({
             'club': club,
+            'club_short': club,
             'standard_loft': lofts.get(club),
             'carry': carry_pct,
             'total': total_pct,
@@ -54,3 +55,7 @@ def build_club_matrix(session_id=None, percentile=75):
         })
 
     return matrix
+
+
+# Alias for test compatibility
+generate_club_matrix = build_club_matrix

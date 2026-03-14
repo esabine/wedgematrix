@@ -74,3 +74,9 @@ def build_wedge_matrix(session_id=None, percentile=75):
         'clubs': WEDGE_CLUBS,
         'matrix': matrix,
     }
+
+
+# Alias that returns just the matrix dict (keyed by swing_size) for simpler access
+def generate_wedge_matrix(session_id=None, percentile=75):
+    result = build_wedge_matrix(session_id=session_id, percentile=percentile)
+    return result['matrix']

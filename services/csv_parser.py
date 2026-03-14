@@ -102,19 +102,71 @@ def parse_back_spin(value):
     return parse_side_spin(value)
 
 
+def normalize_club_name(name):
+    """Map a CSV club name to its short code.
+
+    e.g. '5 Iron' -> '5i', 'G-Wedge' -> 'AW'
+    Returns the short code if mapped, or the original name if unknown.
+    """
+    return CLUB_NAME_MAP.get(name, name)
+
+
+def should_skip_row(row):
+    """Return True if this CSV row should be skipped (blank, Average, Deviation)."""
+    club = row.get('Club', '').strip() if isinstance(row, dict) else ''
+    index_val = row.get('Index', '').strip() if isinstance(row, dict) else ''
+    if not club and index_val in ('', 'Average', 'Deviation'):
+        return True
+    if not club:
+        return True
+    return False
+
+
+def parse_shot_row(row):
+    """Parse a single shot row (dict keyed by CSV column headers) into a shot dict."""
+    club = row.get('Club', '').strip()
+    club_short = normalize_club_name(club)
+    index_val = row.get('Index', '')
+
+    return {
+        'club': club,
+        'club_short': club_short,
+        'club_index': safe_int(index_val),
+        'ball_speed': safe_float(row.get('Ball Speed(mph)')),
+        'launch_direction': row.get('Launch Direction', ''),
+        'launch_direction_deg': parse_direction(row.get('Launch Direction')),
+        'launch_angle': safe_float(row.get('Launch Angle')),
+        'spin_rate': safe_int(row.get('Spin Rate')),
+        'spin_axis': row.get('Spin Axis', ''),
+        'spin_axis_deg': parse_direction(row.get('Spin Axis')),
+        'back_spin': parse_back_spin(row.get('Back Spin')),
+        'side_spin': parse_side_spin(row.get('Side Spin')),
+        'apex': safe_float(row.get('Apex(yd)')),
+        'carry': safe_float(row.get('Carry(yd)')),
+        'total': safe_float(row.get('Total(yd)')),
+        'offline': parse_direction(row.get('Offline(yd)')),
+        'landing_angle': safe_float(row.get('Landing Angle')),
+        'club_path': parse_direction(row.get('Club Path')),
+        'face_angle': parse_direction(row.get('Face Angle')),
+        'attack_angle': safe_float(row.get('Attack Angle')),
+        'dynamic_loft': safe_float(row.get(' Dynamic Loft', row.get('Dynamic Loft'))),
+    }
+
+
 def parse_header(csv_text):
     """Parse the CSV header row to extract date and location.
 
     Expected format: Dates,03-12-2026,Place,Driving Ranges
-    Returns: (date_obj, location_str)
+    Returns: dict with 'date_str', 'date', and 'location' keys.
     """
     lines = csv_text.strip().split('\n')
     if not lines:
-        return None, None
+        return {'date_str': None, 'date': None, 'location': None}
 
     first_line = lines[0]
     parts = first_line.split(',')
 
+    date_str = None
     session_date = None
     location = None
 
@@ -131,19 +183,33 @@ def parse_header(csv_text):
     if len(parts) >= 4:
         location = parts[3].strip()
 
-    return session_date, location
+    return {'date_str': date_str, 'date': session_date, 'location': location}
+
+
+def parse_csv_file(file_path):
+    """Parse a CSV file from disk. Convenience wrapper around parse_csv.
+
+    Returns dict with 'date_str', 'date', 'location', 'shots' keys.
+    """
+    with open(file_path, 'r', encoding='utf-8') as f:
+        text = f.read()
+    return parse_csv(text)
 
 
 def parse_csv(csv_text):
     """Parse the full CSV file and return structured shot data.
 
     Returns: {
-        'session_date': date or None,
+        'date_str': str or None,
+        'date': date or None,
         'location': str or None,
         'shots': [dict, ...]
     }
     """
-    session_date, location = parse_header(csv_text)
+    header = parse_header(csv_text)
+    session_date = header['date']
+    location = header['location']
+    date_str = header['date_str']
 
     lines = csv_text.strip().split('\n')
     shots = []
@@ -158,8 +224,8 @@ def parse_csv(csv_text):
     if header_row_idx is None:
         return {
             'session_date': session_date,
-            'location': location,
-            'shots': [],
+        'date_str': date_str,
+        'date': session_date,
         }
 
     # Parse remaining rows as shot data
@@ -221,6 +287,8 @@ def parse_csv(csv_text):
 
     return {
         'session_date': session_date,
+        'date_str': date_str,
+        'date': session_date,
         'location': location,
         'shots': shots,
     }
