@@ -1,3 +1,20 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# App runtime
+golf_analytics.db
+uploads/
+
+# IDE
+.vscode/
+*.swp
+
 # Squad: ignore runtime state (logs, inbox, sessions)
 .squad/orchestration-log/
 .squad/log/
