@@ -1,3 +1,8 @@
-fix: analytics charts render data + add temporal filter controls
+fix: analytics API endpoints return proper chart data
+
+- carry-distribution: returns flat array of {club, carry} instead of nested dict
+- loft-trend: maps club_short to club key for chart.js compatibility
+- dispersion/spin-carry/shot-shape: add club alias alongside club_short
+- analytics page already passes has_data and clubs to template
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
