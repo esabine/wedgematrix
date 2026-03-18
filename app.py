@@ -1,5 +1,6 @@
+import json
 import os
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from flask import (
     Flask, render_template, request, redirect, url_for,
     flash, jsonify, send_from_directory
@@ -78,7 +79,7 @@ def register_routes(app):
         if request.method == 'GET':
             return render_template('import.html')
 
-        file = request.files.get('csv_file')
+        file = request.files.get('file')
         if not file or not file.filename:
             flash('No file selected.', 'error')
             return redirect(url_for('import_data'))
@@ -90,84 +91,89 @@ def register_routes(app):
         csv_text = file.read().decode('utf-8', errors='replace')
         parsed = parse_csv(csv_text)
 
-        if not parsed['shots']:
+        if not parsed.get('shots'):
             flash('No shot data found in CSV.', 'error')
             return redirect(url_for('import_data'))
 
         data_type = request.form.get('data_type', 'club')
 
-        # Group shots by club for display
-        grouped = {}
-        for i, shot in enumerate(parsed['shots']):
-            club = shot['club']
-            grouped.setdefault(club, []).append({**shot, '_index': i})
+        session_info = {
+            'filename': file.filename,
+            'date': parsed.get('date_str', ''),
+            'location': parsed.get('location', ''),
+            'data_type': data_type,
+        }
 
         return render_template('import.html',
-                               parsed=parsed,
-                               grouped=grouped,
-                               data_type=data_type,
-                               filename=file.filename,
-                               csv_text=csv_text,
-                               swing_sizes=SWING_SIZES,
-                               step='review')
+                               parsed_shots=parsed['shots'],
+                               session_info=session_info)
 
     @app.route('/import/save', methods=['POST'])
     def import_save():
-        csv_text = request.form.get('csv_text', '')
-        data_type = request.form.get('data_type', 'club')
-        filename = request.form.get('filename', 'unknown.csv')
-        notes = request.form.get('notes', '')
+        session_info = json.loads(request.form.get('session_info', '{}'))
+        shots_data = json.loads(request.form.get('shots_data', '[]'))
 
-        parsed = parse_csv(csv_text)
+        data_type = session_info.get('data_type', 'club')
+        filename = session_info.get('filename', 'unknown.csv')
+        location = session_info.get('location')
+
+        # Parse date string back to a date object
+        date_str = session_info.get('date', '')
+        session_date = None
+        if date_str:
+            for fmt in ('%m-%d-%Y', '%Y-%m-%d'):
+                try:
+                    session_date = datetime.strptime(date_str, fmt).date()
+                    break
+                except ValueError:
+                    continue
 
         session = Session(
             filename=filename,
-            session_date=parsed['session_date'],
-            location=parsed['location'],
+            session_date=session_date,
+            location=location,
             data_type=data_type,
-            notes=notes,
+            notes='',
         )
         db.session.add(session)
         db.session.flush()  # get session.id
 
-        for i, shot_data in enumerate(parsed['shots']):
-            # Determine swing size
+        for i, shot_data in enumerate(shots_data):
             if data_type == 'club':
                 swing_size = 'full'
             else:
-                # For wedge data, read swing size from form field
-                swing_size = request.form.get(f'swing_size_{i}', 'full')
+                swing_size = request.form.get(f'swing_sizes[{i}]', 'full')
 
             shot = Shot(
                 session_id=session.id,
-                club=shot_data['club'],
-                club_short=shot_data['club_short'],
-                club_index=shot_data['club_index'],
+                club=shot_data.get('club', ''),
+                club_short=shot_data.get('club_short', ''),
+                club_index=shot_data.get('club_index'),
                 swing_size=swing_size,
-                ball_speed=shot_data['ball_speed'],
-                launch_direction=shot_data['launch_direction'],
-                launch_direction_deg=shot_data['launch_direction_deg'],
-                launch_angle=shot_data['launch_angle'],
-                spin_rate=shot_data['spin_rate'],
-                spin_axis=shot_data['spin_axis'],
-                spin_axis_deg=shot_data['spin_axis_deg'],
-                back_spin=shot_data['back_spin'],
-                side_spin=shot_data['side_spin'],
-                apex=shot_data['apex'],
-                carry=shot_data['carry'],
-                total=shot_data['total'],
-                offline=shot_data['offline'],
-                landing_angle=shot_data['landing_angle'],
-                club_path=shot_data['club_path'],
-                face_angle=shot_data['face_angle'],
-                attack_angle=shot_data['attack_angle'],
-                dynamic_loft=shot_data['dynamic_loft'],
+                ball_speed=shot_data.get('ball_speed'),
+                launch_direction=shot_data.get('launch_direction'),
+                launch_direction_deg=shot_data.get('launch_direction_deg'),
+                launch_angle=shot_data.get('launch_angle'),
+                spin_rate=shot_data.get('spin_rate'),
+                spin_axis=shot_data.get('spin_axis'),
+                spin_axis_deg=shot_data.get('spin_axis_deg'),
+                back_spin=shot_data.get('back_spin'),
+                side_spin=shot_data.get('side_spin'),
+                apex=shot_data.get('apex'),
+                carry=shot_data.get('carry'),
+                total=shot_data.get('total'),
+                offline=shot_data.get('offline'),
+                landing_angle=shot_data.get('landing_angle'),
+                club_path=shot_data.get('club_path'),
+                face_angle=shot_data.get('face_angle'),
+                attack_angle=shot_data.get('attack_angle'),
+                dynamic_loft=shot_data.get('dynamic_loft'),
                 excluded=False,
             )
             db.session.add(shot)
 
         db.session.commit()
-        flash(f'Imported {len(parsed["shots"])} shots from {filename}.', 'success')
+        flash(f'Imported {len(shots_data)} shots from {filename}.', 'success')
         return redirect(url_for('session_detail', session_id=session.id))
 
     @app.route('/sessions')
