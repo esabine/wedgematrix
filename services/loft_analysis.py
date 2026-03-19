@@ -78,7 +78,10 @@ def analyze_loft(session_id=None, club_short=None, date_from=None):
     if session_id is not None:
         q = q.filter(Shot.session_id == session_id)
     if club_short is not None:
-        q = q.filter(Shot.club_short == club_short)
+        if isinstance(club_short, (list, tuple)):
+            q = q.filter(Shot.club_short.in_(club_short))
+        else:
+            q = q.filter(Shot.club_short == club_short)
 
     shots = q.all()
     results = []

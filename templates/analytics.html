@@ -192,11 +192,25 @@
             }
 
             clubBtns.forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    var on = this.getAttribute('data-active') === '1';
-                    this.setAttribute('data-active', on ? '0' : '1');
-                    this.classList.toggle('btn-golf', !on);
-                    this.classList.toggle('btn-outline-secondary', on);
+                btn.addEventListener('click', function(e) {
+                    var club = this.getAttribute('data-club');
+                    if (e.ctrlKey || e.metaKey) {
+                        // Ctrl+click: additive toggle
+                        var on = this.getAttribute('data-active') === '1';
+                        this.setAttribute('data-active', on ? '0' : '1');
+                        this.classList.toggle('btn-golf', !on);
+                        this.classList.toggle('btn-outline-secondary', on);
+                    } else {
+                        // Plain click: exclusive select
+                        clubBtns.forEach(function(b) {
+                            b.setAttribute('data-active', '0');
+                            b.classList.remove('btn-golf');
+                            b.classList.add('btn-outline-secondary');
+                        });
+                        this.setAttribute('data-active', '1');
+                        this.classList.remove('btn-outline-secondary');
+                        this.classList.add('btn-golf');
+                    }
                     syncClubInput();
                     loadAnalytics();
                 });

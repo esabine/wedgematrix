@@ -33,6 +33,7 @@ def get_shots_query(session_id=None, club_short=None, swing_size=None, excluded=
 
     By default excludes excluded shots unless excluded=None (return all).
     date_from: if set, only include shots from sessions on or after this date.
+    club_short: single string or list of club names.
     """
     q = Shot.query
     if date_from is not None:
@@ -40,7 +41,10 @@ def get_shots_query(session_id=None, club_short=None, swing_size=None, excluded=
     if session_id is not None:
         q = q.filter(Shot.session_id == session_id)
     if club_short is not None:
-        q = q.filter(Shot.club_short == club_short)
+        if isinstance(club_short, (list, tuple)):
+            q = q.filter(Shot.club_short.in_(club_short))
+        else:
+            q = q.filter(Shot.club_short == club_short)
     if swing_size is not None:
         q = q.filter(Shot.swing_size == swing_size)
     if excluded is not None:
@@ -71,18 +75,23 @@ def club_stats(session_id=None, club_short=None, percentile=75, date_from=None):
     }
 
 
-def per_club_statistics(session_id=None, percentile=75, date_from=None):
-    """Compute stats for every club that has data."""
+def per_club_statistics(session_id=None, percentile=75, date_from=None, clubs=None):
+    """Compute stats for every club that has data.
+
+    clubs: optional list of club_short names to limit to.
+    """
     # Get distinct clubs in data
     q = Shot.query.with_entities(Shot.club_short).distinct()
     if session_id is not None:
         q = q.filter(Shot.session_id == session_id)
     if date_from is not None:
         q = q.join(Session).filter(Session.session_date >= date_from)
-    clubs = [row[0] for row in q.all()]
+    if clubs is not None:
+        q = q.filter(Shot.club_short.in_(clubs))
+    all_clubs = [row[0] for row in q.all()]
 
     results = {}
-    for c in clubs:
+    for c in all_clubs:
         results[c] = club_stats(session_id=session_id, club_short=c, percentile=percentile, date_from=date_from)
     return results
 

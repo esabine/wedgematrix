@@ -251,20 +251,27 @@ function initClubToggleButtons() {
         }
     }
 
+    // "None" button for shots page
+    var noneBtn = document.getElementById('club-toggle-none-btn');
+
+    function setButtonState(btn, active) {
+        var club = btn.getAttribute('data-club');
+        activeSet[club] = active;
+        btn.setAttribute('data-active', active ? '1' : '0');
+        btn.classList.toggle('btn-golf', active);
+        btn.classList.toggle('btn-outline-secondary', !active);
+    }
+
     buttons.forEach(function (btn) {
-        btn.addEventListener('click', function () {
+        btn.addEventListener('click', function (e) {
             var club = this.getAttribute('data-club');
-            var isActive = activeSet[club];
-            if (isActive) {
-                activeSet[club] = false;
-                this.setAttribute('data-active', '0');
-                this.classList.remove('btn-golf');
-                this.classList.add('btn-outline-secondary');
+            if (e.ctrlKey || e.metaKey) {
+                // Ctrl+click: additive toggle (old behavior)
+                setButtonState(this, !activeSet[club]);
             } else {
-                activeSet[club] = true;
-                this.setAttribute('data-active', '1');
-                this.classList.remove('btn-outline-secondary');
-                this.classList.add('btn-golf');
+                // Plain click: exclusive select — deselect all, select only this
+                buttons.forEach(function (b) { setButtonState(b, false); });
+                setButtonState(this, true);
             }
             applyFilter();
         });
@@ -272,21 +279,14 @@ function initClubToggleButtons() {
 
     if (allBtn) {
         allBtn.addEventListener('click', function () {
-            var allActive = activeCount() === buttons.length;
-            buttons.forEach(function (btn) {
-                var club = btn.getAttribute('data-club');
-                if (allActive) {
-                    activeSet[club] = false;
-                    btn.setAttribute('data-active', '0');
-                    btn.classList.remove('btn-golf');
-                    btn.classList.add('btn-outline-secondary');
-                } else {
-                    activeSet[club] = true;
-                    btn.setAttribute('data-active', '1');
-                    btn.classList.remove('btn-outline-secondary');
-                    btn.classList.add('btn-golf');
-                }
-            });
+            buttons.forEach(function (btn) { setButtonState(btn, true); });
+            applyFilter();
+        });
+    }
+
+    if (noneBtn) {
+        noneBtn.addEventListener('click', function () {
+            buttons.forEach(function (btn) { setButtonState(btn, false); });
             applyFilter();
         });
     }
