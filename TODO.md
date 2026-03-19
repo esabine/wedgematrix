@@ -41,3 +41,4 @@ go up.
 -on the printed matrices cards, show the applicable percentile and the date printed at the bottom, below each matrix. Just show the date in mm/dd/yyyy format, with
 nothing else. For the Percentile, just show the Percentile with the number, as in Pnn. Left-justify the percentile. Right-justify the date.
 -on the club matrix, remove "My Distances" from the top.
+-add pdf to gitignore and remove any committed pdf files

@@ -198,6 +198,83 @@ def per_club_stats(session_id, club_short):
     }
 
 
+def detect_outliers(session_id=None, club_short=None, date_from=None, iqr_multiplier=1.5):
+    """Identify statistical outliers per club using IQR method.
+
+    Flags shots whose carry distance or offline (direction) falls outside
+    Q1 - multiplier*IQR .. Q3 + multiplier*IQR for their club.
+
+    Args:
+        session_id: optional session filter.
+        club_short: optional club filter (string or list).
+        date_from: optional date cutoff.
+        iqr_multiplier: IQR scaling factor (default 1.5).
+
+    Returns dict keyed by club_short, each value a list of outlier dicts:
+        {shot_id, reasons: [...], carry, offline, carry_bounds, direction_bounds}
+    """
+    shots = get_shots_query(
+        session_id=session_id, club_short=club_short,
+        excluded=False, date_from=date_from,
+    ).all()
+
+    by_club = {}
+    for s in shots:
+        by_club.setdefault(s.club_short, []).append(s)
+
+    result = {}
+    for club_name, club_shots in by_club.items():
+        # Track outlier reasons per shot_id
+        outlier_map = {}  # shot_id -> {shot, reasons, ...}
+
+        # --- Carry distance IQR ---
+        carries = [(s, s.carry) for s in club_shots if s.carry is not None]
+        if len(carries) >= 4:
+            vals = np.array([c for _, c in carries])
+            q1, q3 = float(np.percentile(vals, 25)), float(np.percentile(vals, 75))
+            iqr = q3 - q1
+            lower, upper = q1 - iqr_multiplier * iqr, q3 + iqr_multiplier * iqr
+            carry_bounds = {'lower': round(lower, 1), 'upper': round(upper, 1)}
+            for s, val in carries:
+                if val < lower or val > upper:
+                    outlier_map[s.id] = {
+                        'shot_id': s.id,
+                        'reasons': ['carry distance outlier'],
+                        'carry': val,
+                        'offline': s.offline,
+                        'carry_bounds': carry_bounds,
+                        'direction_bounds': None,
+                    }
+
+        # --- Direction (offline) IQR ---
+        offlines = [(s, s.offline) for s in club_shots if s.offline is not None]
+        if len(offlines) >= 4:
+            vals = np.array([o for _, o in offlines])
+            q1, q3 = float(np.percentile(vals, 25)), float(np.percentile(vals, 75))
+            iqr = q3 - q1
+            lower, upper = q1 - iqr_multiplier * iqr, q3 + iqr_multiplier * iqr
+            dir_bounds = {'lower': round(lower, 1), 'upper': round(upper, 1)}
+            for s, val in offlines:
+                if val < lower or val > upper:
+                    if s.id in outlier_map:
+                        outlier_map[s.id]['reasons'].append('direction outlier')
+                        outlier_map[s.id]['direction_bounds'] = dir_bounds
+                    else:
+                        outlier_map[s.id] = {
+                            'shot_id': s.id,
+                            'reasons': ['direction outlier'],
+                            'carry': s.carry,
+                            'offline': val,
+                            'carry_bounds': None,
+                            'direction_bounds': dir_bounds,
+                        }
+
+        if outlier_map:
+            result[club_name] = list(outlier_map.values())
+
+    return result
+
+
 def carry_distribution(session_id=None, club_short=None, date_from=None, percentile=75):
     """Get carry distances grouped by club for box plot / histogram.
 

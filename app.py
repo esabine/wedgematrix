@@ -12,7 +12,7 @@ from services.csv_parser import parse_csv, CLUB_NAME_MAP
 from services.analytics import (
     club_stats, per_club_statistics, flag_errant_shots,
     dispersion_data, spin_vs_carry_data, shot_shape_data,
-    carry_distribution, get_shots_query,
+    carry_distribution, get_shots_query, detect_outliers,
 )
 from services.club_matrix import build_club_matrix, CLUB_ORDER
 from services.wedge_matrix import build_wedge_matrix, SWING_SIZES
@@ -385,6 +385,48 @@ def register_routes(app):
         )
         db.session.commit()
         return jsonify({'success': True, 'updated': len(shot_ids), 'excluded': exclude_val})
+
+    @app.route('/api/shots/suggested-exclusions')
+    def api_suggested_exclusions():
+        """Identify statistical outliers using IQR method per club.
+
+        Query params:
+            session_id: optional session filter.
+            club: optional comma-separated club filter.
+            date_range: optional date range filter (7/30/60/90).
+            iqr_multiplier: IQR scaling factor (default 1.5).
+        """
+        session_id = request.args.get('session_id', type=int)
+        club_raw = request.args.get('club', '')
+        date_range = request.args.get('date_range', '')
+        iqr_multiplier = request.args.get('iqr_multiplier', 1.5, type=float)
+        date_from = parse_date_range(date_range)
+
+        clubs = [c.strip() for c in club_raw.split(',') if c.strip()] if club_raw else None
+
+        outliers = detect_outliers(
+            session_id=session_id,
+            club_short=clubs,
+            date_from=date_from,
+            iqr_multiplier=iqr_multiplier,
+        )
+
+        # Sort clubs by CLUB_ORDER for consistent frontend display
+        ordered = {}
+        for c in CLUB_ORDER:
+            if c in outliers:
+                ordered[c] = outliers[c]
+        # Include any clubs not in CLUB_ORDER at the end
+        for c in outliers:
+            if c not in ordered:
+                ordered[c] = outliers[c]
+
+        total_count = sum(len(v) for v in ordered.values())
+        return jsonify({
+            'outliers': ordered,
+            'total_count': total_count,
+            'iqr_multiplier': iqr_multiplier,
+        })
 
     # ──────────────────────────────────────────────
     # Batch import routes

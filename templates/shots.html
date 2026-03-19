@@ -98,6 +98,43 @@
     </div>
 </div>
 
+<!-- Suggested Exclusions (loaded via AJAX) -->
+<div id="suggested-exclusions-wrapper" class="mb-3" style="display:none;">
+    <div class="card border-warning shadow-sm">
+        <div class="card-header bg-warning bg-opacity-10 py-2 d-flex justify-content-between align-items-center"
+             style="cursor:pointer;" data-bs-toggle="collapse" data-bs-target="#suggested-exclusions-body">
+            <span>
+                <i class="bi bi-graph-up"></i> <strong>Suggested Exclusions</strong>
+                <span class="badge bg-warning text-dark ms-1" id="suggested-count">0</span>
+            </span>
+            <i class="bi bi-chevron-down small"></i>
+        </div>
+        <div class="collapse show" id="suggested-exclusions-body">
+            <div class="card-body py-2">
+                <div class="d-flex justify-content-end mb-2">
+                    <button class="btn btn-sm btn-outline-warning" id="exclude-all-suggested">
+                        <i class="bi bi-eye-slash"></i> Exclude All Suggested
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0" style="font-size:0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>Club</th>
+                                <th>Carry</th>
+                                <th>Offline</th>
+                                <th>Reason</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="suggested-exclusions-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Batch Actions + Pagination Info -->
 <div class="d-flex gap-2 mb-2 align-items-center" id="batch-actions">
     <input type="checkbox" id="select-all" class="form-check-input">
@@ -324,6 +361,100 @@ document.addEventListener('DOMContentLoaded', function() {
             if (p >= 1 && p <= {{ total_pages }}) navigateWithFilters(p);
         });
     });
+
+    // ── Suggested Exclusions ──
+    (function() {
+        var wrapper = document.getElementById('suggested-exclusions-wrapper');
+        var tbody = document.getElementById('suggested-exclusions-list');
+        var countBadge = document.getElementById('suggested-count');
+        var excludeAllBtn = document.getElementById('exclude-all-suggested');
+        var dismissedIds = {};  // session-only dismiss tracking
+
+        fetch('/api/shots/suggested-exclusions')
+            .then(function(r) { return r.ok ? r.json() : []; })
+            .then(function(data) {
+                var items = Array.isArray(data) ? data : [];
+                if (!items.length) return;
+                renderSuggestions(items);
+                wrapper.style.display = '';
+            })
+            .catch(function() {});
+
+        function renderSuggestions(items) {
+            var visible = items.filter(function(s) { return !dismissedIds[s.id]; });
+            countBadge.textContent = visible.length;
+            tbody.innerHTML = '';
+            if (!visible.length) { wrapper.style.display = 'none'; return; }
+            visible.forEach(function(s) {
+                var tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td class="fw-semibold">' + (s.club || s.club_short || '') + '</td>' +
+                    '<td>' + (s.carry != null ? s.carry.toFixed(1) : '—') + '</td>' +
+                    '<td>' + (s.offline != null ? s.offline.toFixed(1) : '—') + '</td>' +
+                    '<td><span class="badge bg-info bg-opacity-75">' + (s.reason || 'Outlier') + '</span></td>' +
+                    '<td class="text-end">' +
+                        '<button class="btn btn-sm btn-outline-warning me-1 suggest-exclude" data-id="' + s.id + '" title="Exclude"><i class="bi bi-eye-slash"></i></button>' +
+                        '<button class="btn btn-sm btn-outline-secondary suggest-dismiss" data-id="' + s.id + '" title="Dismiss"><i class="bi bi-x-lg"></i></button>' +
+                    '</td>';
+                tbody.appendChild(tr);
+            });
+
+            // Wire per-row buttons
+            tbody.querySelectorAll('.suggest-exclude').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var id = parseInt(this.getAttribute('data-id'), 10);
+                    excludeShot(id, items);
+                });
+            });
+            tbody.querySelectorAll('.suggest-dismiss').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var id = parseInt(this.getAttribute('data-id'), 10);
+                    dismissedIds[id] = true;
+                    renderSuggestions(items);
+                });
+            });
+        }
+
+        function excludeShot(shotId, items) {
+            fetch('/shots/' + shotId + '/toggle-exclude', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success && data.excluded) {
+                    dismissedIds[shotId] = true;
+                    renderSuggestions(items);
+                    // Update the main table row if visible
+                    var row = document.querySelector('tr[data-shot-id="' + shotId + '"]');
+                    if (row) {
+                        row.classList.add('excluded-row');
+                        var badge = row.querySelector('.badge');
+                        if (badge) { badge.className = 'badge bg-secondary'; badge.textContent = 'Yes'; }
+                    }
+                }
+            });
+        }
+
+        if (excludeAllBtn) {
+            excludeAllBtn.addEventListener('click', function() {
+                var visibleIds = [];
+                tbody.querySelectorAll('.suggest-exclude').forEach(function(btn) {
+                    visibleIds.push(parseInt(btn.getAttribute('data-id'), 10));
+                });
+                if (!visibleIds.length) return;
+                fetch('/shots/batch-exclude', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: JSON.stringify({ shot_ids: visibleIds, exclude: true })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success) window.location.reload();
+                });
+            });
+        }
+    })();
 });
 </script>
 {% endblock %}
