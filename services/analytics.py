@@ -284,7 +284,10 @@ def carry_distribution(session_id=None, club_short=None, date_from=None, percent
     """Get carry distances grouped by club for box plot / histogram.
 
     percentile: the upper percentile to include (default P75).
+    Returns dict keyed by club with box plot stats and gapping data.
     """
+    from services.club_matrix import CLUB_ORDER
+
     shots = get_shots_query(
         session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
     ).all()
@@ -306,5 +309,18 @@ def carry_distribution(session_id=None, club_short=None, date_from=None, percent
             'max': float(np.max(carries_arr)),
             'count': len(carries),
             'percentile': percentile,
+            'gap': None,  # computed below
         }
+
+    # Compute gapping: distance difference between adjacent clubs in CLUB_ORDER
+    # Gap = this club's q3 carry minus the next shorter club's q3 carry
+    ordered_clubs = [c for c in CLUB_ORDER if c in result]
+    for i, club in enumerate(ordered_clubs):
+        if i < len(ordered_clubs) - 1:
+            next_club = ordered_clubs[i + 1]
+            this_q3 = result[club]['q3']
+            next_q3 = result[next_club]['q3']
+            if this_q3 is not None and next_q3 is not None:
+                result[club]['gap'] = round(this_q3 - next_q3, 1)
+
     return result
