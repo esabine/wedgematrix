@@ -68,13 +68,13 @@
         <div class="print-hint">Both cards print on one sheet — cut along the dashed borders.</div>
     </div>
 
-    <!-- Card: Club Matrix (2.5" × 4") -->
+    <!-- Card: Club Matrix -->
     <div class="card-preview no-print">
         <div class="card-label">Club Matrix — 3.06″ wide</div>
     </div>
     <div class="pocket-card" id="club-card">
         <div class="card-header-row">
-            <span class="player-name">{{ player_name or 'My Distances' }}</span>
+            <span class="player-name">{{ player_name or 'Club Distances' }}</span>
             <span class="card-date">{{ card_date or '' }}</span>
         </div>
         <table class="pocket-table">
@@ -97,10 +97,13 @@
                 {% endfor %}
             </tbody>
         </table>
+        <div class="card-footer-row">
+            <span class="card-percentile">P{{ percentile or 75 }}</span>
+            <span class="card-print-date"></span>
+        </div>
     </div>
 
     <!-- Card: Wedge Matrix -->
-    <!-- Card: Wedge Matrix (2.5" × 3") -->
     <div class="card-preview no-print">
         <div class="card-label">Wedge Matrix — 3.06″ wide</div>
     </div>
@@ -141,9 +144,23 @@
                 {% endfor %}
             </tbody>
         </table>
+        <div class="card-footer-row">
+            <span class="card-percentile">P{{ percentile or 75 }}</span>
+            <span class="card-print-date"></span>
+        </div>
     </div>
 
     <script>
+        // Set print date on all footer date spans
+        var today = new Date();
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var dd = String(today.getDate()).padStart(2, '0');
+        var yyyy = today.getFullYear();
+        var dateStr = mm + '/' + dd + '/' + yyyy;
+        document.querySelectorAll('.card-print-date').forEach(function(el) {
+            el.textContent = dateStr;
+        });
+
         // Auto-trigger print if requested via query param
         if (new URLSearchParams(window.location.search).get('auto') === '1') {
             window.addEventListener('load', () => setTimeout(() => window.print(), 300));
