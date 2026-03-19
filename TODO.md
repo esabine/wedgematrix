@@ -18,3 +18,13 @@ swing size and then click import and the are processed and then removed from the
 them.  This will minimize the scrolling needed.
 -when wedge data is imported, give the user the option to select from the top a group of shots, such as "first 5", and then they can set the swing size. This will
 minimize the need to click individual rows. -Let the user set the size of the selection group (don't fix it ag 5).
+-do whatever scaling is necessary to make both matrices 37% wider when printed to paper
+-Double the current font size on both printed matrices
+-on the analytics page the charts render data for the "All" selection and for any single club selection, but never when more than one club is selected.
+-for the club selector tool, change the selection behavior as follows: "All" selects every club. "None" de-selects every club. For everything else a selection is a single
+club request, unless the user holds down the control key, then the club selection adds to what is already selected.
+-the shot data page still performs poorly, likely due to the amount of data. Investigate what can be done to improve it. consider using the same club/date/session
+selector controls from the analytics page on the shots page.
+-the analytics page is missing percentile selection options
+-at the bottom of every page with a percentile selection option, include some text that explains percentiles. Give some good, relatable, information so the user
+can cearly understand the concept

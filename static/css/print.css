@@ -26,26 +26,26 @@
     box-sizing: border-box;
     overflow: hidden;
     font-family: "Segoe UI", Arial, Helvetica, sans-serif;
-    font-size: 6.5pt;
+    font-size: 13pt;
     line-height: 1.12;
     color: #000;
     background: #fff;
 }
 
-/* Club matrix: 2.5" × 4" */
+/* Club matrix: 3.4" × 4" (was 2.5" × 4", 37% wider, 2× font) */
 #club-card {
-    width: 2.5in;
+    width: 3.4in;
     height: 4in;
-    font-size: 7pt;
+    font-size: 14pt;
 }
 
-#club-card .pocket-table { font-size: 7pt; }
-#club-card .pocket-table th { font-size: 6.5pt; }
+#club-card .pocket-table { font-size: 14pt; }
+#club-card .pocket-table th { font-size: 13pt; }
 #club-card .pocket-table td { padding: 1.5pt 3pt; }
 
-/* Wedge matrix: 2.5" × 3" */
+/* Wedge matrix: 3.4" × 3" (was 2.5" × 3", 37% wider, 2× font) */
 #wedge-card {
-    width: 2.5in;
+    width: 3.4in;
     height: 3in;
 }
 
@@ -60,11 +60,11 @@
 
 .player-name {
     font-weight: 700;
-    font-size: 7pt;
+    font-size: 14pt;
 }
 
 .card-date {
-    font-size: 6pt;
+    font-size: 12pt;
     color: #555;
 }
 
@@ -72,7 +72,7 @@
 .pocket-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 6.5pt;
+    font-size: 13pt;
 }
 
 .pocket-table th {
@@ -81,7 +81,7 @@
     font-weight: 700;
     text-align: center;
     padding: 1.5pt 2pt;
-    font-size: 6pt;
+    font-size: 12pt;
     text-transform: uppercase;
     letter-spacing: 0.03em;
 }
@@ -96,7 +96,7 @@
 .pocket-table .club-col {
     text-align: left;
     font-weight: 700;
-    width: 22px;
+    width: 30px;
 }
 
 .pocket-table tbody tr:nth-child(even) {
