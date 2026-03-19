@@ -65,9 +65,16 @@
             <!-- Swing Size Tagging UI -->
             <div class="alert alert-info">
                 <i class="bi bi-info-circle"></i>
-                <strong>Tag swing sizes:</strong> Select contiguous rows within each club group, then assign a swing size from the dropdown.
+                <strong>Tag swing sizes:</strong> Select rows, assign a swing size, then import that batch. Repeat for each group.
             </div>
-            <div class="mb-3 d-flex align-items-center gap-2">
+            <div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
+                <label class="fw-semibold text-nowrap">Group select:</label>
+                <div class="input-group input-group-sm" style="width: 200px;">
+                    <span class="input-group-text">First</span>
+                    <input type="number" id="group-size-input" class="form-control" value="5" min="1">
+                    <button id="select-group-btn" class="btn btn-outline-golf" type="button">Select</button>
+                </div>
+                <span class="text-muted">|</span>
                 <label class="fw-semibold text-nowrap">Assign to selected:</label>
                 <select id="swing-size-select" class="form-select form-select-sm" style="width: auto;">
                     <option value="">Choose size…</option>
@@ -86,6 +93,13 @@
                 <button id="clear-selection-btn" class="btn btn-sm btn-outline-secondary">
                     Clear Selection
                 </button>
+            </div>
+            <div class="mb-3 d-flex align-items-center gap-2">
+                <button id="import-batch-btn" class="btn btn-golf btn-sm" type="button" disabled>
+                    <i class="bi bi-cloud-upload"></i> Import Tagged Shots
+                </button>
+                <span id="import-status" class="text-muted small"></span>
+                <span id="remaining-count" class="badge bg-secondary ms-auto">{{ parsed_shots|length }} shots remaining</span>
             </div>
             {% endif %}
 
@@ -150,9 +164,16 @@
                     <a href="{{ url_for('import_data') }}" class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Start Over
                     </a>
+                    {% if session_info.data_type == 'wedge' %}
+                    <div id="all-done-section" style="display:none;">
+                        <span class="text-success fw-semibold"><i class="bi bi-check-circle-fill"></i> All shots imported!</span>
+                        <a id="view-session-link" href="#" class="btn btn-golf btn-sm ms-2">View Session</a>
+                    </div>
+                    {% else %}
                     <button type="submit" class="btn btn-golf btn-lg" id="save-import-btn">
                         <i class="bi bi-check-circle"></i> Save Import
                     </button>
+                    {% endif %}
                 </div>
             </form>
         </div>

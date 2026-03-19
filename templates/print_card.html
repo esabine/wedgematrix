@@ -52,6 +52,11 @@
                 letter-spacing: 0.1em;
                 margin-bottom: 0.5rem;
             }
+            .print-hint {
+                margin-top: 0.5rem;
+                color: #6c757d;
+                font-size: 0.85rem;
+            }
         }
     </style>
 </head>
@@ -60,11 +65,12 @@
     <div class="print-controls no-print">
         <button class="btn-print" onclick="window.print()">🖨️ Print Pocket Card</button>
         <button class="btn-back" onclick="history.back()">← Back</button>
+        <div class="print-hint">Both cards print on one sheet — cut along the dashed borders.</div>
     </div>
 
-    <!-- Card: Club Matrix -->
+    <!-- Card: Club Matrix (2.5" × 4") -->
     <div class="card-preview no-print">
-        <div class="card-label">Club Matrix (Front)</div>
+        <div class="card-label">Club Matrix — 2.5″ × 4″</div>
     </div>
     <div class="pocket-card" id="club-card">
         <div class="card-header-row">
@@ -94,8 +100,9 @@
     </div>
 
     <!-- Card: Wedge Matrix -->
+    <!-- Card: Wedge Matrix (2.5" × 3") -->
     <div class="card-preview no-print">
-        <div class="card-label">Wedge Matrix (Back)</div>
+        <div class="card-label">Wedge Matrix — 2.5″ × 3″</div>
     </div>
     <div class="pocket-card" id="wedge-card">
         <div class="card-header-row">

@@ -22,8 +22,6 @@
 
 /* ---------- Pocket Card Base ---------- */
 .pocket-card {
-    width: 2in;
-    height: 3.5in;
     padding: 0.08in 0.1in;
     box-sizing: border-box;
     overflow: hidden;
@@ -32,6 +30,23 @@
     line-height: 1.12;
     color: #000;
     background: #fff;
+}
+
+/* Club matrix: 2.5" × 4" */
+#club-card {
+    width: 2.5in;
+    height: 4in;
+    font-size: 7pt;
+}
+
+#club-card .pocket-table { font-size: 7pt; }
+#club-card .pocket-table th { font-size: 6.5pt; }
+#club-card .pocket-table td { padding: 1.5pt 3pt; }
+
+/* Wedge matrix: 2.5" × 3" */
+#wedge-card {
+    width: 2.5in;
+    height: 3in;
 }
 
 .card-header-row {
@@ -96,8 +111,8 @@
 /* ---------- Print Page Setup ---------- */
 @media print {
     @page {
-        size: 2in 3.5in;
-        margin: 0;
+        size: letter portrait;
+        margin: 0.4in;
     }
 
     * {
@@ -108,17 +123,19 @@
     html, body {
         margin: 0;
         padding: 0;
-        width: 2in;
+        width: auto;
         background: #fff;
     }
 
+    /* Both cards on one sheet — no page breaks between */
     .pocket-card {
-        page-break-after: always;
         page-break-inside: avoid;
+        margin-bottom: 0.25in;
+        border: 0.5pt dashed #bbb;
     }
 
     .pocket-card:last-child {
-        page-break-after: avoid;
+        margin-bottom: 0;
     }
 
     .card-preview {

@@ -355,6 +355,98 @@ def register_routes(app):
         return jsonify({'success': True, 'updated': len(shot_ids), 'excluded': exclude_val})
 
     # ──────────────────────────────────────────────
+    # Batch import routes
+    # ──────────────────────────────────────────────
+
+    @app.route('/api/import/batch', methods=['POST'])
+    def api_import_batch():
+        """Save a batch of shots from a parsed CSV preview.
+
+        Accepts JSON:
+          session_info: {filename, date, location, data_type}
+          session_id:   null on first batch, reuse on subsequent batches
+          shots:        [{swing_size, club, club_short, carry, ...}, ...]
+
+        Returns {success, session_id, saved_count}.
+        """
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON body'}), 400
+
+        session_info = data.get('session_info', {})
+        shots_list = data.get('shots', [])
+        existing_session_id = data.get('session_id')
+
+        if not shots_list:
+            return jsonify({'error': 'No shots provided'}), 400
+
+        # Reuse session or create a new one
+        if existing_session_id:
+            sess = Session.query.get(existing_session_id)
+            if not sess:
+                return jsonify({'error': f'Session {existing_session_id} not found'}), 404
+        else:
+            data_type = session_info.get('data_type', 'wedge')
+            filename = session_info.get('filename', 'unknown.csv')
+            location = session_info.get('location')
+
+            date_str = session_info.get('date', '')
+            session_date = None
+            if date_str:
+                for fmt in ('%m-%d-%Y', '%Y-%m-%d'):
+                    try:
+                        session_date = datetime.strptime(date_str, fmt).date()
+                        break
+                    except ValueError:
+                        continue
+
+            sess = Session(
+                filename=filename,
+                session_date=session_date,
+                location=location,
+                data_type=data_type,
+                notes='',
+            )
+            db.session.add(sess)
+            db.session.flush()
+
+        for shot_data in shots_list:
+            shot = Shot(
+                session_id=sess.id,
+                club=shot_data.get('club', ''),
+                club_short=shot_data.get('club_short', ''),
+                club_index=shot_data.get('club_index'),
+                swing_size=shot_data.get('swing_size', 'full'),
+                ball_speed=shot_data.get('ball_speed'),
+                launch_direction=shot_data.get('launch_direction'),
+                launch_direction_deg=shot_data.get('launch_direction_deg'),
+                launch_angle=shot_data.get('launch_angle'),
+                spin_rate=shot_data.get('spin_rate'),
+                spin_axis=shot_data.get('spin_axis'),
+                spin_axis_deg=shot_data.get('spin_axis_deg'),
+                back_spin=shot_data.get('back_spin'),
+                side_spin=shot_data.get('side_spin'),
+                apex=shot_data.get('apex'),
+                carry=shot_data.get('carry'),
+                total=shot_data.get('total'),
+                offline=shot_data.get('offline'),
+                landing_angle=shot_data.get('landing_angle'),
+                club_path=shot_data.get('club_path'),
+                face_angle=shot_data.get('face_angle'),
+                attack_angle=shot_data.get('attack_angle'),
+                dynamic_loft=shot_data.get('dynamic_loft'),
+                excluded=False,
+            )
+            db.session.add(shot)
+
+        db.session.commit()
+        return jsonify({
+            'success': True,
+            'session_id': sess.id,
+            'saved_count': len(shots_list),
+        })
+
+    # ──────────────────────────────────────────────
     # JSON API routes
     # ──────────────────────────────────────────────
 
