@@ -42,3 +42,4 @@ go up.
 nothing else. For the Percentile, just show the Percentile with the number, as in Pnn. Left-justify the percentile. Right-justify the date.
 -on the club matrix, remove "My Distances" from the top.
 -add pdf to gitignore and remove any committed pdf files
+-for the chart comparing spin 

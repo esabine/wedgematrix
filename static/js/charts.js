@@ -73,12 +73,6 @@ function loadAnalytics() {
     }).catch(function (err) {
         console.error('Analytics load error:', err);
     });
-
-    // Wire up the refresh button
-    var refreshBtn = document.getElementById('analytics-refresh');
-    if (refreshBtn) {
-        refreshBtn.onclick = loadAnalytics;
-    }
 }
 
 function handleResponse(response) {
