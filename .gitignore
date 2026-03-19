@@ -15,6 +15,9 @@ uploads/
 .vscode/
 *.swp
 
+# PDFs
+*.pdf
+
 # Squad: ignore runtime state (logs, inbox, sessions)
 .squad/orchestration-log/
 .squad/log/
