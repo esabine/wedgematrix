@@ -40,3 +40,10 @@
 - **Import flow confirmed:** Two-step — POST `/import/upload` parses CSV and renders preview with `parsed_shots` + `session_info`; POST `/import/save` reads JSON hidden fields, creates Session + Shot records. Tested with real 82-shot CSV file end-to-end.
 - **Key contract:** `session_info` dict must contain `filename`, `date` (as date string like '03-08-2026'), `location`, `data_type`. The `parsed_shots` list is the raw output of `parse_csv()['shots']`.
 - **E2E validation with 03-17 CSV:** Confirmed 125 shots (2H/4i/5i/6i/7i/8i/9i/PW/AW/SW) import correctly, session date parses to 2026-03-17, location=Driving Ranges. Session detail page and sessions list both render the imported data.
+
+### 2026-03-18 — Carry Distribution Fix + Batch Import
+- **carry-distribution API fix:** The route was flattening `carry_distribution()` dict into `[{club, carry}]`, but frontend `initCarryDistribution()` does `Object.keys(data)` and `data[c].median` — expects the raw dict `{club: {values, min, q1, median, q3, max, count}}`. Fixed by returning `jsonify(raw)` directly.
+- **Batch import API:** New `/api/import/batch` POST endpoint accepts `{session_info, session_id, shots[]}`. Creates session on first batch (session_id=null), reuses on subsequent batches. Returns `{success, session_id, saved_count}`. Shot objects include `swing_size` per shot.
+- **Group selection UI:** Import page now has "First N" group select control (configurable, default 5) plus "Import Tagged Shots" button. Wedge flow uses batch API with incremental imports; club flow keeps the existing form submit.
+- **Frontend batch flow:** import.js tracks `batchSessionId` across calls. After each batch import, tagged rows are removed from DOM, remaining count updates. When all rows imported, shows "All done" with link to session.
+- **Template split:** Wedge data type shows batch import controls; club data type shows the original "Save Import" button. No regression for club imports.

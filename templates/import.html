@@ -62,44 +62,62 @@
             <p class="text-muted">{{ parsed_shots|length }} shots parsed successfully.</p>
 
             {% if session_info.data_type == 'wedge' %}
-            <!-- Swing Size Tagging UI -->
-            <div class="alert alert-info">
+            <!-- Batch Import Controls -->
+            <div class="alert alert-info py-2 mb-3">
                 <i class="bi bi-info-circle"></i>
-                <strong>Tag swing sizes:</strong> Select rows, assign a swing size, then import that batch. Repeat for each group.
+                <strong>Batch import:</strong> Select a group from the top, set the swing size, then import. Imported shots disappear — repeat for the next group.
             </div>
-            <div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
-                <label class="fw-semibold text-nowrap">Group select:</label>
-                <div class="input-group input-group-sm" style="width: 200px;">
-                    <span class="input-group-text">First</span>
-                    <input type="number" id="group-size-input" class="form-control" value="5" min="1">
-                    <button id="select-group-btn" class="btn btn-outline-golf" type="button">Select</button>
+
+            <div class="card border mb-3" id="batch-controls">
+                <div class="card-body py-2">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-auto">
+                            <label class="form-label form-label-sm mb-1 fw-semibold">1. Select group</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">First</span>
+                                <input type="number" id="group-size-input" class="form-control" value="5" min="1" style="width:60px;">
+                                <button id="select-group-btn" class="btn btn-outline-golf" type="button">
+                                    <i class="bi bi-check2-square"></i> Select
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label form-label-sm mb-1 fw-semibold">2. Swing size</label>
+                            <select id="swing-size-select" class="form-select form-select-sm">
+                                <option value="">Choose…</option>
+                                <option value="4/4">4/4 (Full)</option>
+                                <option value="3/4">3/4</option>
+                                <option value="2/4">2/4 (Half)</option>
+                                <option value="1/4">1/4 (Quarter)</option>
+                                <option value="10:2">10:2</option>
+                                <option value="10:3">10:3</option>
+                                <option value="9:3">9:3</option>
+                                <option value="8:4">8:4</option>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label form-label-sm mb-1 fw-semibold">3. Import</label>
+                            <div class="d-flex gap-1">
+                                <button id="assign-size-btn" class="btn btn-sm btn-outline-golf" disabled>
+                                    <i class="bi bi-tag"></i> Tag Only
+                                </button>
+                                <button id="import-batch-btn" class="btn btn-sm btn-golf" type="button" disabled>
+                                    <i class="bi bi-cloud-upload"></i> Tag &amp; Import
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label form-label-sm mb-1">&nbsp;</label>
+                            <button id="clear-selection-btn" class="btn btn-sm btn-outline-secondary d-block">
+                                Clear
+                            </button>
+                        </div>
+                        <div class="col-auto ms-auto text-end">
+                            <span id="import-status" class="text-muted small d-block"></span>
+                            <span id="remaining-count" class="badge bg-secondary">{{ parsed_shots|length }} remaining</span>
+                        </div>
+                    </div>
                 </div>
-                <span class="text-muted">|</span>
-                <label class="fw-semibold text-nowrap">Assign to selected:</label>
-                <select id="swing-size-select" class="form-select form-select-sm" style="width: auto;">
-                    <option value="">Choose size…</option>
-                    <option value="4/4">4/4 (Full)</option>
-                    <option value="3/4">3/4</option>
-                    <option value="2/4">2/4 (Half)</option>
-                    <option value="1/4">1/4 (Quarter)</option>
-                    <option value="10:2">10:2</option>
-                    <option value="10:3">10:3</option>
-                    <option value="9:3">9:3</option>
-                    <option value="8:4">8:4</option>
-                </select>
-                <button id="assign-size-btn" class="btn btn-sm btn-outline-golf" disabled>
-                    <i class="bi bi-tag"></i> Assign
-                </button>
-                <button id="clear-selection-btn" class="btn btn-sm btn-outline-secondary">
-                    Clear Selection
-                </button>
-            </div>
-            <div class="mb-3 d-flex align-items-center gap-2">
-                <button id="import-batch-btn" class="btn btn-golf btn-sm" type="button" disabled>
-                    <i class="bi bi-cloud-upload"></i> Import Tagged Shots
-                </button>
-                <span id="import-status" class="text-muted small"></span>
-                <span id="remaining-count" class="badge bg-secondary ms-auto">{{ parsed_shots|length }} shots remaining</span>
             </div>
             {% endif %}
 
