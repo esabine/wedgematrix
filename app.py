@@ -13,6 +13,7 @@ from services.analytics import (
     club_stats, per_club_statistics, flag_errant_shots,
     dispersion_data, spin_vs_carry_data, shot_shape_data,
     carry_distribution, get_shots_query, detect_outliers,
+    launch_spin_stability, radar_comparison,
 )
 from services.club_matrix import build_club_matrix, CLUB_ORDER
 from services.wedge_matrix import build_wedge_matrix, SWING_SIZES
@@ -597,6 +598,10 @@ def register_routes(app):
                 return jsonify({'error': 'session_id required'}), 400
             flagged = flag_errant_shots(session_id)
             return jsonify({'flagged_ids': flagged, 'count': len(flagged)})
+        elif chart_type == 'launch-spin-stability':
+            return jsonify(launch_spin_stability(session_id=session_id, club_short=clubs, date_from=date_from, percentile=percentile))
+        elif chart_type == 'radar-comparison':
+            return jsonify(radar_comparison(session_id=session_id, club_short=clubs, date_from=date_from, percentile=percentile))
         else:
             return jsonify({'error': f'Unknown chart type: {chart_type}'}), 404
 
