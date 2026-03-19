@@ -152,6 +152,11 @@
         display: none !important;
     }
 
+    /* Hide card header (title/date) — footer already shows percentile + date */
+    .card-header-row {
+        display: none !important;
+    }
+
     /* High contrast for print */
     .pocket-table th {
         background-color: #1b4332 !important;
