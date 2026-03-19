@@ -230,40 +230,60 @@ def register_routes(app):
     @app.route('/shots')
     def shots():
         session_id = request.args.get('session_id', type=int)
-        club = request.args.get('club')
+        club = request.args.get('club', '')
         swing_size = request.args.get('swing_size')
+        date_range = request.args.get('date_range', '')
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        per_page = min(per_page, 200)  # cap at 200
+
+        date_from = parse_date_range(date_range)
 
         q = Shot.query
-        if session_id:
+        if date_from is not None:
+            q = q.join(Session).filter(Session.session_date >= date_from)
+        elif session_id:
             q = q.filter(Shot.session_id == session_id)
-        if club:
-            q = q.filter(Shot.club_short == club)
+        if session_id and date_from is not None:
+            q = q.filter(Shot.session_id == session_id)
+
+        # Parse comma-separated club filter
+        club_list = [c.strip() for c in club.split(',') if c.strip()] if club else []
+        if club_list:
+            q = q.filter(Shot.club_short.in_(club_list))
+
         if swing_size:
             q = q.filter(Shot.swing_size == swing_size)
 
-        shot_list = q.order_by(Shot.session_id, Shot.club_short, Shot.club_index).all()
-        all_sessions = Session.query.order_by(Session.session_date.desc()).all()
+        total_count = q.count()
+        shot_list = q.order_by(
+            Shot.session_id, Shot.club_short, Shot.club_index
+        ).offset((page - 1) * per_page).limit(per_page).all()
 
+        total_pages = max(1, (total_count + per_page - 1) // per_page)
+        all_sessions = Session.query.order_by(Session.session_date.desc()).all()
         clubs = [r[0] for r in db.session.query(Shot.club_short).distinct().order_by(Shot.club_short).all()]
 
         # Augment shots with standard_loft and errant flag for template
         lofts = {cl.club_short: cl.standard_loft for cl in ClubLoft.query.all()}
         for s in shot_list:
             s.standard_loft = lofts.get(s.club_short)
-            s.errant = False  # errant flagging is computed on demand, not stored
-
-        # Clubs that have data (for toggle buttons)
-        all_possible_clubs = CLUB_ORDER
+            s.errant = False
 
         return render_template('shots.html',
                                shots=shot_list,
                                sessions=all_sessions,
                                clubs=clubs,
-                               all_possible_clubs=all_possible_clubs,
+                               all_possible_clubs=CLUB_ORDER,
                                selected_session=session_id,
                                selected_club=club,
-                               selected_clubs=clubs,
-                               selected_swing_size=swing_size)
+                               selected_clubs=club_list,
+                               selected_swing_size=swing_size,
+                               date_range=date_range,
+                               page=page,
+                               per_page=per_page,
+                               total_pages=total_pages,
+                               total_count=total_count)
 
     @app.route('/analytics')
     def analytics():

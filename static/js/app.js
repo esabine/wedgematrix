@@ -194,10 +194,15 @@ function initDeleteConfirmation() {
     });
 }
 
-/* ---------- Club Toggle Buttons (Shots page) ---------- */
+/* ---------- Club Toggle Buttons (Shots page — client-side only) ---------- */
 function initClubToggleButtons() {
     var toggleGroup = document.getElementById('club-toggle-group');
     if (!toggleGroup) return;
+
+    // Skip if the page uses server-side pagination (shots page now handles its own toggles)
+    if (document.querySelector('.pagination[aria-label="Shot pagination"]')) return;
+    // Also skip if the shots page inline script is present (detected by shots-date-range-group)
+    if (document.getElementById('shots-date-range-group')) return;
 
     var buttons = toggleGroup.querySelectorAll('.club-toggle-btn');
     var allBtn = document.getElementById('club-toggle-all-btn');
