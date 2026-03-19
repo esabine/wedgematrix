@@ -136,10 +136,14 @@ function initSwingSizeTagging() {
     function updateAssignButton() {
         var anyChecked = table.querySelectorAll('.shot-select:checked').length > 0;
         assignBtn.disabled = !anyChecked;
+        updateBatchButton();
     }
 
     if (sizeSelect) {
-        sizeSelect.addEventListener('change', updateAssignButton);
+        sizeSelect.addEventListener('change', function () {
+            updateAssignButton();
+            updateBatchButton();
+        });
     }
 }
 
@@ -171,6 +175,7 @@ function initGroupSelect() {
         // Update button states
         var assignBtn = document.getElementById('assign-size-btn');
         if (assignBtn) assignBtn.disabled = (selected === 0);
+        updateBatchButton();
     });
 }
 
@@ -183,9 +188,32 @@ function initBatchImport() {
 
     importBtn.addEventListener('click', function () {
         var table = document.getElementById('shot-preview-table');
+        var sizeSelect = document.getElementById('swing-size-select');
         if (!table) return;
 
-        // Gather all tagged (swing_size assigned) rows that are still visible
+        // "Tag & Import" — assign the selected swing size to checked rows first
+        var swingSize = sizeSelect ? sizeSelect.value : '';
+        if (!swingSize) {
+            alert('Please choose a swing size before importing.');
+            return;
+        }
+
+        var checked = table.querySelectorAll('.shot-select:checked');
+        if (checked.length === 0) {
+            alert('No shots selected. Use "Select" to pick a group first.');
+            return;
+        }
+
+        // Assign swing size to selected rows
+        checked.forEach(function (cb) {
+            var index = cb.getAttribute('data-index');
+            var badge = table.querySelector('.swing-size-badge[data-index="' + index + '"]');
+            var input = table.querySelector('.swing-size-input[data-index="' + index + '"]');
+            if (badge) { badge.textContent = swingSize; badge.classList.add('assigned'); }
+            if (input) { input.value = swingSize; }
+        });
+
+        // Now gather all tagged rows and import them
         var taggedRows = [];
         table.querySelectorAll('tbody tr.shot-row').forEach(function (row) {
             var input = row.querySelector('.swing-size-input');
@@ -195,10 +223,7 @@ function initBatchImport() {
             }
         });
 
-        if (taggedRows.length === 0) {
-            alert('No shots have been tagged with a swing size. Assign sizes first.');
-            return;
-        }
+        if (taggedRows.length === 0) return;
 
         // Read session_info from hidden field
         var sessionInfoEl = document.querySelector('input[name="session_info"]');
@@ -210,7 +235,7 @@ function initBatchImport() {
 
         // Build shot payloads from tagged rows
         var batchShots = taggedRows.map(function (item) {
-            var shotData = allShots[item.index];
+            var shotData = Object.assign({}, allShots[item.index]);
             shotData.swing_size = item.swingSize;
             return shotData;
         });
@@ -240,17 +265,22 @@ function initBatchImport() {
                 // Update remaining count
                 var remaining = table.querySelectorAll('tbody tr.shot-row').length;
                 var countBadge = document.getElementById('remaining-count');
-                if (countBadge) countBadge.textContent = remaining + ' shots remaining';
+                if (countBadge) countBadge.textContent = remaining + ' remaining';
 
                 var statusEl = document.getElementById('import-status');
-                if (statusEl) statusEl.textContent = result.saved_count + ' shots saved ✓';
+                if (statusEl) statusEl.textContent = result.saved_count + ' saved ✓';
+
+                // Reset swing size dropdown
+                if (sizeSelect) sizeSelect.value = '';
 
                 // If no rows left, show "all done"
                 if (remaining === 0) {
                     var allDone = document.getElementById('all-done-section');
                     var viewLink = document.getElementById('view-session-link');
+                    var batchCard = document.getElementById('batch-controls');
                     if (allDone) allDone.style.display = '';
                     if (viewLink) viewLink.href = '/sessions/' + batchSessionId;
+                    if (batchCard) batchCard.style.display = 'none';
                     importBtn.style.display = 'none';
                 }
 
@@ -264,7 +294,7 @@ function initBatchImport() {
         })
         .finally(function () {
             importBtn.disabled = false;
-            importBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Import Tagged Shots';
+            importBtn.innerHTML = '<i class="bi bi-cloud-upload"></i> Tag &amp; Import';
             updateBatchButton();
         });
     });
@@ -275,14 +305,20 @@ function updateBatchButton() {
     if (!importBtn) return;
 
     var table = document.getElementById('shot-preview-table');
+    var sizeSelect = document.getElementById('swing-size-select');
     if (!table) return;
 
-    // Enable only if at least one visible row has a swing size
+    // Enable "Tag & Import" when shots are selected AND swing size is chosen
+    var anyChecked = table.querySelectorAll('.shot-select:checked').length > 0;
+    var hasSize = sizeSelect && sizeSelect.value;
+
+    // Also enable if there are already-tagged rows
     var anyTagged = false;
     table.querySelectorAll('tbody tr.shot-row .swing-size-input').forEach(function (input) {
         if (input.value) anyTagged = true;
     });
-    importBtn.disabled = !anyTagged;
+
+    importBtn.disabled = !(anyChecked && hasSize) && !anyTagged;
 }
 
 /* ---------- Save Validation (club data — full save) ---------- */
