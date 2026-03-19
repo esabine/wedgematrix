@@ -66,3 +66,13 @@
 **Batch exclude/include fixed:** Backend wasn't returning `success` field. JS was sending `exclude` (bool) but backend expected `action` (string). Fixed both sides. Select-all now respects club-toggle visibility.
 
 **Pocket card portrait:** Changed from 3.5"×2" landscape to 2"×3.5" portrait. Tightened fonts/padding to fit narrower width.
+
+### 2026-03-18 — Performance, Analytics UX, Print Sizing, Batch Import
+
+**Shots tab toggle performance:** Cached all DOM row references and club text at init time. Replaced `getActiveClubs()` array scan with `activeSet` object hash for O(1) lookups. Eliminated per-toggle `querySelectorAll` re-queries. Toggle now instant even with 500+ rows.
+
+**Analytics club toggles:** Replaced single-club `<select>` dropdown with toggle buttons matching shots page UX. Added "All" and "None" quick-action buttons. Charts auto-refresh on toggle via `loadAnalytics()`. Comma-separated club values passed in hidden input.
+
+**Print card sizing:** Club matrix resized from 2"×3.5" to 2.5"×4". Wedge matrix set to 2.5"×3". Both cards now print on a single letter-size sheet with dashed cut guides. Used ID-specific sizing (`#club-card`, `#wedge-card`) instead of single `.pocket-card` size. `@page` changed from card-size to `letter portrait`.
+
+**Batch import UX:** Reorganized controls into a clean 3-step card layout: (1) group-select with configurable count, (2) swing size dropdown, (3) "Tag & Import" button that assigns size + sends to backend in one click. Imported rows removed from DOM. "All done" section with session link appears when no rows remain. Backend `/api/import/batch` endpoint (built by Fenster) handles incremental saves with session_id tracking across batches.
