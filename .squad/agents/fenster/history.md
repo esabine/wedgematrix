@@ -30,3 +30,13 @@
 - **Temporal filtering:** `get_shots_query` accepts `date_from` param, joins Session table for `session_date >= date_from`. All analytics/loft functions cascade this parameter. `parse_date_range()` in app.py converts "7"/"30"/"60"/"90" to date cutoffs.
 - **Batch exclude fix:** Frontend sends `{shot_ids, exclude: bool}` but backend originally checked `data.get('action')`. Fixed to check `'exclude'` key first (bool), fallback to `'action'` (string). Both toggle and batch responses include `success: True` for JS `if (data.success)` check.
 - **Pre-existing test failures:** 3 tests in `test_loft_analysis.py` fail (assess_loft difference logic + no_good_shots percentage) — not caused by these changes.
+
+### 2026-03-14 — CSV Import Pipeline Fix
+- **Root cause:** Four mismatches between `app.py` route handlers and `import.html` template broke the entire import flow.
+- **Bug 1 — file input name:** HTML form `name="file"` but route read `request.files.get('csv_file')` → file never found, always flashed "No file selected."
+- **Bug 2 — template variables:** Upload route passed `parsed`, `grouped`, `step` etc. but template expected `parsed_shots` (list) and `session_info` (dict with filename/date/location/data_type).
+- **Bug 3 — save data source:** Template POSTs `session_info` and `shots_data` as JSON hidden fields, but save route tried to read `csv_text` and re-parse the CSV (field didn't exist). Fixed save route to deserialize JSON from template fields.
+- **Bug 4 — swing size field names:** Template uses `swing_sizes[N]`, route read `swing_size_N`. Fixed route to match template's bracket notation.
+- **Import flow confirmed:** Two-step — POST `/import/upload` parses CSV and renders preview with `parsed_shots` + `session_info`; POST `/import/save` reads JSON hidden fields, creates Session + Shot records. Tested with real 82-shot CSV file end-to-end.
+- **Key contract:** `session_info` dict must contain `filename`, `date` (as date string like '03-08-2026'), `location`, `data_type`. The `parsed_shots` list is the raw output of `parse_csv()['shots']`.
+- **E2E validation with 03-17 CSV:** Confirmed 125 shots (2H/4i/5i/6i/7i/8i/9i/PW/AW/SW) import correctly, session date parses to 2026-03-17, location=Driving Ranges. Session detail page and sessions list both render the imported data.

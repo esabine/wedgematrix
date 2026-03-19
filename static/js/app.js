@@ -205,41 +205,43 @@ function initClubToggleButtons() {
 
     if (!table) return;
 
-    function getActiveClubs() {
-        var active = [];
-        buttons.forEach(function (b) {
-            if (b.getAttribute('data-active') === '1') {
-                active.push(b.getAttribute('data-club'));
-            }
-        });
-        return active;
+    // Cache rows + their clubs once — avoids DOM re-query on every toggle
+    var rows = table.querySelectorAll('tbody .shot-data-row');
+    var rowClubs = [];
+    rows.forEach(function (row) {
+        var cell = row.querySelectorAll('td')[1];
+        rowClubs.push(cell ? cell.textContent.trim() : '');
+    });
+
+    var countEl = document.getElementById('shot-count');
+    var activeSet = {};
+    buttons.forEach(function (b) {
+        if (b.getAttribute('data-active') === '1') {
+            activeSet[b.getAttribute('data-club')] = true;
+        }
+    });
+
+    function activeCount() {
+        var n = 0;
+        for (var k in activeSet) { if (activeSet[k]) n++; }
+        return n;
     }
 
     function applyFilter() {
-        var activeClubs = getActiveClubs();
-        var rows = table.querySelectorAll('tbody .shot-data-row');
+        var total = activeCount();
+        var showAll = total === 0 || total === buttons.length;
         var visibleCount = 0;
 
-        rows.forEach(function (row) {
-            var clubCell = row.querySelectorAll('td')[1];
-            if (!clubCell) return;
-            var club = clubCell.textContent.trim();
-            if (activeClubs.length === 0 || activeClubs.indexOf(club) !== -1) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-
-        var countEl = document.getElementById('shot-count');
-        if (countEl) {
-            countEl.textContent = visibleCount + ' shots';
+        for (var i = 0; i < rows.length; i++) {
+            var show = showAll || activeSet[rowClubs[i]];
+            rows[i].style.display = show ? '' : 'none';
+            if (show) visibleCount++;
         }
 
-        // Update All button style
+        if (countEl) countEl.textContent = visibleCount + ' shots';
+
         if (allBtn) {
-            if (activeClubs.length === buttons.length) {
+            if (total === buttons.length) {
                 allBtn.classList.remove('btn-outline-secondary');
                 allBtn.classList.add('btn-golf');
             } else {
@@ -251,12 +253,15 @@ function initClubToggleButtons() {
 
     buttons.forEach(function (btn) {
         btn.addEventListener('click', function () {
-            var isActive = this.getAttribute('data-active') === '1';
+            var club = this.getAttribute('data-club');
+            var isActive = activeSet[club];
             if (isActive) {
+                activeSet[club] = false;
                 this.setAttribute('data-active', '0');
                 this.classList.remove('btn-golf');
                 this.classList.add('btn-outline-secondary');
             } else {
+                activeSet[club] = true;
                 this.setAttribute('data-active', '1');
                 this.classList.remove('btn-outline-secondary');
                 this.classList.add('btn-golf');
@@ -267,13 +272,16 @@ function initClubToggleButtons() {
 
     if (allBtn) {
         allBtn.addEventListener('click', function () {
-            var allActive = getActiveClubs().length === buttons.length;
+            var allActive = activeCount() === buttons.length;
             buttons.forEach(function (btn) {
+                var club = btn.getAttribute('data-club');
                 if (allActive) {
+                    activeSet[club] = false;
                     btn.setAttribute('data-active', '0');
                     btn.classList.remove('btn-golf');
                     btn.classList.add('btn-outline-secondary');
                 } else {
+                    activeSet[club] = true;
                     btn.setAttribute('data-active', '1');
                     btn.classList.remove('btn-outline-secondary');
                     btn.classList.add('btn-golf');
