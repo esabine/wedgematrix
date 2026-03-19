@@ -86,3 +86,19 @@
 **Percentile selector on analytics:** Added btn-group radio buttons (P25/P50/P75/P90/P95, default P75) to analytics filter bar. Hidden input `#analytics-percentile` feeds into `loadAnalytics()` which passes `?percentile=XX` to all 6 chart API endpoints. Also expanded club_matrix and wedge_matrix dropdowns with P25 and P95 options.
 
 **Percentile explanation cards:** Added light green info cards at the bottom of analytics, club_matrix, and wedge_matrix pages. Each card explains percentiles in golf terms with concrete examples (e.g., "P75 = 155 yards means 75% of shots carry at least that far"). Wedge matrix card uses wedge-specific examples (swing sizes, carry/max).
+
+### 2026-03-20 — Shots UX, Print Polish, Analytics Cleanup
+
+**Hidden shots toggle:** Excluded shots now hidden by default on the shots page. A `form-switch` toggle ("Show Hidden" with badge count) in the filter bar controls `include_hidden` URL param. Backend counts hidden shots before filtering them out so the badge is accurate regardless of toggle state. Toggle triggers page reload with updated filter params.
+
+**Suggested exclusions UI:** Added AJAX-driven collapsible card at top of shots page that fetches from `/api/shots/suggested-exclusions`. Shows outlier shots grouped with club, carry, offline, and reason. Per-shot Exclude (calls toggle-exclude endpoint) and Dismiss (session-only, no server call) buttons. Bulk "Exclude All Suggested" uses batch-exclude endpoint. Section auto-hides when no suggestions available.
+
+**Dispersion chart origin:** Set Y-axis (carry) `min: 0` on dispersion scatter chart so patterns always show relative to origin.
+
+**Refresh button removed:** Removed the manual refresh button from analytics page. Charts already auto-refresh when any filter (clubs, percentile, date range, session) changes — the button was redundant.
+
+**Percentile explanation rewrite:** All three pages (analytics, club_matrix, wedge_matrix) now use a golf analogy: "line up shots shortest to longest." Explains WHY numbers go UP with higher percentiles — because `np.percentile(carries, N)` picks further up the sorted list. P50 = safe, P75 = reliable go number, P90 = A-game distance.
+
+**Print card sizing:** Removed fixed `height` from `#club-card` and `#wedge-card` in print.css — table height now flows naturally from row count. Width reduced 10% from 3.4" to 3.06". Both cards still fit on one letter sheet with cut guides.
+
+**Print card metadata:** Added `.card-footer-row` below each printed matrix — percentile ("P75") left-justified, today's date (mm/dd/yyyy via JS) right-justified. Thin border-top separator. Club card heading changed from "My Distances" to "Club Distances". Print route already passes `percentile` to template context.
