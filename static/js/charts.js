@@ -206,7 +206,7 @@ function initDispersionChart(data) {
     });
 }
 
-/* ---------- Spin Rate vs Carry ---------- */
+/* ---------- Spin Rate vs Roll Distance ---------- */
 function initSpinChart(data) {
     var canvas = document.getElementById('chart-spin');
     if (!canvas) return;
@@ -219,7 +219,7 @@ function initSpinChart(data) {
     items.forEach(function (d) {
         var club = d.club || d.club_short;
         if (!clubMap[club]) clubMap[club] = [];
-        clubMap[club].push({ x: d.carry, y: d.spin_rate });
+        clubMap[club].push({ x: d.roll, y: d.spin_rate });
     });
 
     var datasets = Object.keys(clubMap).map(function (club, i) {
@@ -243,14 +243,14 @@ function initSpinChart(data) {
                     callbacks: {
                         label: function (ctx) {
                             return ctx.dataset.label + ': ' +
-                                   ctx.parsed.x + 'yd, ' +
+                                   ctx.parsed.x + 'yd roll, ' +
                                    ctx.parsed.y + ' rpm';
                         },
                     },
                 },
             },
             scales: {
-                x: { title: { display: true, text: 'Carry (yards)' } },
+                x: { title: { display: true, text: 'Roll Distance (yards)' } },
                 y: { title: { display: true, text: 'Spin Rate (rpm)' }, beginAtZero: false },
             },
         },

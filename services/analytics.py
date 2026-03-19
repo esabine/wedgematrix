@@ -146,14 +146,19 @@ def dispersion_data(session_id=None, club_short=None, date_from=None):
 
 
 def spin_vs_carry_data(session_id=None, club_short=None, date_from=None):
-    """Get spin rate vs carry data."""
+    """Get spin rate vs roll distance data (roll = total - carry)."""
     shots = get_shots_query(
         session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
     ).all()
     return [
-        {'carry': s.carry, 'spin_rate': s.spin_rate, 'club': s.club_short, 'club_short': s.club_short}
+        {
+            'roll': round(s.total - s.carry, 1),
+            'spin_rate': s.spin_rate,
+            'club': s.club_short,
+            'club_short': s.club_short,
+        }
         for s in shots
-        if s.carry is not None and s.spin_rate is not None
+        if s.carry is not None and s.total is not None and s.spin_rate is not None
     ]
 
 
