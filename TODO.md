@@ -28,3 +28,16 @@ selector controls from the analytics page on the shots page.
 -the analytics page is missing percentile selection options
 -at the bottom of every page with a percentile selection option, include some text that explains percentiles. Give some good, relatable, information so the user
 can cearly understand the concept
+-on the shots page, "hidden shots" should also be hidden from view. User should be able to toggle to see the hidden shots again, but default is to hide them
+-on the analytics page, the dispersion pattern should always start from 0 on the carry axis. The point is to see the pattern from the POV of the origin point.
+-based on analytics data, some shots should be suggested for exclusion. add some type of a "suggested excluded shots" to the shots page that the user can review
+and agree (or disagree) to the exclusion
+-on the analytics page, does the refresh button serve a purpose?
+-for the percentile commentary, do a better job explaining the differences between percentile numbers and why you see the numbers go up when the percentile numbers
+go up.
+-on the two matrix cards make the height of the table dynamically determined based on the number of rows
+-when printed, the two matrices are now slightly too wide. Reduce the printed width by 10%
+-on the printed matrices the percentile used should be the percentile selected on the page when "Print Card" was chosen
+-on the printed matrices cards, show the applicable percentile and the date printed at the bottom, below each matrix. Just show the date in mm/dd/yyyy format, with
+nothing else. For the Percentile, just show the Percentile with the number, as in Pnn. Left-justify the percentile. Right-justify the date.
+-on the club matrix, remove "My Distances" from the top.

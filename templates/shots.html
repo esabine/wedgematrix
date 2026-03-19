@@ -64,6 +64,16 @@
                     <option value="200" {% if per_page == 200 %}selected{% endif %}>200</option>
                 </select>
             </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="toggle-hidden"
+                           {% if include_hidden %}checked{% endif %}>
+                    <label class="form-check-label small" for="toggle-hidden">
+                        Show Hidden
+                        {% if hidden_count %}<span class="badge bg-secondary ms-1">{{ hidden_count }}</span>{% endif %}
+                    </label>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -221,6 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var sessionVal = document.getElementById('filter-session').value;
         var swingVal = document.getElementById('filter-swing-size').value;
         var perPageVal = document.getElementById('filter-per-page').value;
+        var hiddenToggle = document.getElementById('toggle-hidden');
 
         // Date range from radio buttons
         var dateRadio = document.querySelector('#shots-date-range-group input[type="radio"]:checked');
@@ -239,6 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (clubStr) params.set('club', clubStr);
         if (dateRange) params.set('date_range', dateRange);
         if (perPageVal && perPageVal !== '50') params.set('per_page', perPageVal);
+        if (hiddenToggle && hiddenToggle.checked) params.set('include_hidden', 'true');
 
         return params;
     }
@@ -254,6 +266,12 @@ document.addEventListener('DOMContentLoaded', function() {
         var el = document.getElementById(id);
         if (el) el.addEventListener('change', function() { navigateWithFilters(1); });
     });
+
+    // Hidden shots toggle
+    var hiddenToggle = document.getElementById('toggle-hidden');
+    if (hiddenToggle) {
+        hiddenToggle.addEventListener('change', function() { navigateWithFilters(1); });
+    }
 
     // Date range radios
     document.querySelectorAll('#shots-date-range-group input[type="radio"]').forEach(function(r) {

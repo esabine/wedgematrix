@@ -233,6 +233,7 @@ def register_routes(app):
         club = request.args.get('club', '')
         swing_size = request.args.get('swing_size')
         date_range = request.args.get('date_range', '')
+        include_hidden = request.args.get('include_hidden', 'false').lower() == 'true'
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 50, type=int)
         per_page = min(per_page, 200)  # cap at 200
@@ -254,6 +255,13 @@ def register_routes(app):
 
         if swing_size:
             q = q.filter(Shot.swing_size == swing_size)
+
+        # Count hidden shots before filtering them out
+        hidden_count = q.filter(Shot.excluded == True).count()
+
+        # Filter out excluded shots unless include_hidden is true
+        if not include_hidden:
+            q = q.filter(Shot.excluded == False)
 
         total_count = q.count()
         shot_list = q.order_by(
@@ -280,6 +288,8 @@ def register_routes(app):
                                selected_clubs=club_list,
                                selected_swing_size=swing_size,
                                date_range=date_range,
+                               include_hidden=include_hidden,
+                               hidden_count=hidden_count,
                                page=page,
                                per_page=per_page,
                                total_pages=total_pages,
