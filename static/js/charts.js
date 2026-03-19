@@ -85,21 +85,38 @@ function buildQueryString(params) {
     return parts.length ? '?' + parts.join('&') : '';
 }
 
-/* ---------- Carry Distance Distribution ---------- */
+/* ---------- Carry Distance Distribution (with Gapping) ---------- */
 function initCarryDistribution(data) {
     var canvas = document.getElementById('chart-carry-distribution');
     if (!canvas || !data || typeof data !== 'object') return;
     destroyChart('carry-distribution');
 
-    // Backend returns {club: {values, min, q1, median, q3, max, count}}
+    // Backend returns {club: {values, min, q1, median, q3, max, count, gap}}
     var labels = Object.keys(data);
     if (!labels.length) return;
 
     var medianData = labels.map(function (c) { return data[c].median || 0; });
-    var q1Data = labels.map(function (c) { return data[c].q1 || 0; });
-    var q3Data = labels.map(function (c) { return data[c].q3 || 0; });
     var pLabel = data[labels[0]] && data[labels[0]].percentile ?
                  'P' + data[labels[0]].percentile : 'P75';
+    var pData = labels.map(function (c) { return data[c].q3 || data[c].median || 0; });
+
+    // Compute gaps between adjacent clubs (longer club to shorter club)
+    var gaps = labels.map(function (c) { return data[c].gap != null ? data[c].gap : null; });
+
+    // Gap colors: red if >20yd, amber if <5yd, green otherwise
+    function gapColor(g) {
+        if (g === null || g === undefined) return 'transparent';
+        if (g > 20) return 'rgba(220, 53, 69, 0.85)';
+        if (g < 5) return 'rgba(255, 193, 7, 0.85)';
+        return 'rgba(45, 106, 79, 0.7)';
+    }
+
+    function gapBorderColor(g) {
+        if (g === null || g === undefined) return 'transparent';
+        if (g > 20) return 'rgba(220, 53, 69, 1)';
+        if (g < 5) return 'rgba(255, 193, 7, 1)';
+        return 'rgba(45, 106, 79, 1)';
+    }
 
     chartInstances['carry-distribution'] = new Chart(canvas, {
         type: 'bar',
@@ -107,39 +124,88 @@ function initCarryDistribution(data) {
             labels: labels,
             datasets: [
                 {
-                    label: 'P25',
-                    data: q1Data,
-                    backgroundColor: 'rgba(45, 106, 79, 0.3)',
-                    borderColor: 'rgba(45, 106, 79, 0.5)',
-                    borderWidth: 1,
-                },
-                {
-                    label: 'Median',
-                    data: medianData,
-                    backgroundColor: GOLF_COLORS.green,
+                    label: 'Carry (' + pLabel + ')',
+                    data: pData,
+                    backgroundColor: labels.map(function (_, i) {
+                        return CLUB_PALETTE[i % CLUB_PALETTE.length];
+                    }),
                     borderColor: 'rgba(45, 106, 79, 1)',
                     borderWidth: 1,
-                },
-                {
-                    label: pLabel,
-                    data: q3Data,
-                    backgroundColor: GOLF_COLORS.greenLight,
-                    borderColor: 'rgba(64, 145, 108, 1)',
-                    borderWidth: 1,
+                    order: 1,
                 },
             ],
         },
         options: {
             responsive: true,
             plugins: {
-                legend: { position: 'top' },
-                tooltip: { mode: 'index' },
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function (ctx) {
+                            var idx = ctx.dataIndex;
+                            var g = gaps[idx];
+                            if (g !== null && g !== undefined) {
+                                var warning = g > 20 ? ' ⚠ too large' : (g < 5 ? ' ⚠ too small' : '');
+                                return 'Gap from prev: ' + g + 'yd' + warning;
+                            }
+                            return '';
+                        },
+                    },
+                },
             },
             scales: {
                 x: { title: { display: true, text: 'Club' } },
                 y: { title: { display: true, text: 'Carry (yards)' }, beginAtZero: false },
             },
         },
+        plugins: [{
+            id: 'gapAnnotations',
+            afterDraw: function (chart) {
+                var ctx = chart.ctx;
+                var meta = chart.getDatasetMeta(0);
+                ctx.save();
+                ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif';
+                ctx.textAlign = 'center';
+
+                for (var i = 0; i < gaps.length; i++) {
+                    var g = gaps[i];
+                    if (g === null || g === undefined) continue;
+
+                    var bar = meta.data[i];
+                    if (!bar) continue;
+
+                    // Draw gap badge above the bar
+                    var x = bar.x;
+                    var y = bar.y - 8;
+                    var text = g + 'yd';
+                    var tw = ctx.measureText(text).width + 8;
+
+                    // Badge background
+                    ctx.fillStyle = gapColor(g);
+                    ctx.beginPath();
+                    ctx.roundRect(x - tw / 2, y - 14, tw, 17, 3);
+                    ctx.fill();
+
+                    // Badge text
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText(text, x, y - 1);
+
+                    // Connector line between adjacent bars
+                    if (i > 0 && meta.data[i - 1]) {
+                        var prevBar = meta.data[i - 1];
+                        ctx.strokeStyle = gapBorderColor(g);
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([3, 3]);
+                        ctx.beginPath();
+                        ctx.moveTo(prevBar.x, prevBar.y);
+                        ctx.lineTo(bar.x, bar.y);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                    }
+                }
+                ctx.restore();
+            },
+        }],
     });
 }
 
