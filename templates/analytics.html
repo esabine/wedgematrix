@@ -140,6 +140,35 @@
     </div>
 </div>
 
+<!-- Performance Analysis Section -->
+<h5 class="mt-4 mb-3"><i class="bi bi-speedometer"></i> Performance Analysis</h5>
+<div class="row g-4">
+    <!-- Launch-Spin Stability Box Plot -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-box"></i> Launch &amp; Spin Stability</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chart-launch-spin-stability"></canvas>
+                <div id="launch-spin-notes" class="mt-2 small text-muted"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Radar Comparison vs PGA Tour -->
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="bi bi-diagram-3"></i> My Shots vs PGA Tour Average</h6>
+            </div>
+            <div class="card-body">
+                <canvas id="chart-radar-comparison"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% if not has_data %}
 <div class="text-center py-5 text-muted">
     <i class="bi bi-graph-up display-1"></i>

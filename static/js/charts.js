@@ -59,12 +59,14 @@ function loadAnalytics() {
         fetch('/api/analytics/spin-carry' + qs).then(handleResponse),
         fetch('/api/analytics/shot-shape' + qs).then(handleResponse),
         fetch('/api/analytics/club-comparison' + qs).then(handleResponse),
+        fetch('/api/analytics/launch-spin-stability' + qs).then(handleResponse),
     ]).then(function (results) {
         initCarryDistribution(results[0]);
         initDispersionChart(results[1]);
         initSpinChart(results[2]);
         initShotShape(results[3]);
         initClubComparison(results[4]);
+        initLaunchSpinStability(results[5]);
     }).catch(function (err) {
         console.error('Analytics load error:', err);
     });
@@ -449,4 +451,137 @@ function initClubComparison(data) {
             },
         },
     });
+}
+
+/* ---------- Launch-Spin Stability Box Plot ---------- */
+function initLaunchSpinStability(data) {
+    var canvas = document.getElementById('chart-launch-spin-stability');
+    var notesEl = document.getElementById('launch-spin-notes');
+    if (!canvas) return;
+    destroyChart('launch-spin-stability');
+
+    // Expected: { clubs: { "7I": { spin: {min,q1,median,q3,max,mean,std}, launch: {...}, high_variance: bool, analysis: str }, ... }, correlation: str }
+    if (!data || !data.clubs) {
+        if (notesEl) notesEl.textContent = '';
+        return;
+    }
+
+    var clubs = Object.keys(data.clubs);
+    if (!clubs.length) return;
+
+    // Build box plot items for spin and launch
+    var spinItems = clubs.map(function (c) {
+        var s = data.clubs[c].spin || {};
+        return { min: s.min, q1: s.q1, median: s.median, q3: s.q3, max: s.max, mean: s.mean };
+    });
+
+    var launchItems = clubs.map(function (c) {
+        var l = data.clubs[c].launch || {};
+        return { min: l.min, q1: l.q1, median: l.median, q3: l.q3, max: l.max, mean: l.mean };
+    });
+
+    // High-variance club indicators
+    var highVarClubs = clubs.filter(function (c) { return data.clubs[c].high_variance; });
+
+    // Color labels for high-variance clubs
+    var labelColors = clubs.map(function (c) {
+        return data.clubs[c].high_variance ? 'rgba(220, 53, 69, 1)' : '#666';
+    });
+
+    // Use side-by-side box plot (Chart.js boxplot plugin)
+    chartInstances['launch-spin-stability'] = new Chart(canvas, {
+        type: 'boxplot',
+        data: {
+            labels: clubs,
+            datasets: [
+                {
+                    label: 'Spin Rate (rpm)',
+                    data: spinItems,
+                    backgroundColor: 'rgba(45, 106, 79, 0.3)',
+                    borderColor: GOLF_COLORS.green,
+                    borderWidth: 2,
+                    medianColor: 'rgba(45, 106, 79, 1)',
+                    outlierBackgroundColor: GOLF_COLORS.red,
+                },
+                {
+                    label: 'Launch Angle (\u00b0)',
+                    data: launchItems,
+                    backgroundColor: 'rgba(54, 162, 235, 0.3)',
+                    borderColor: GOLF_COLORS.blue,
+                    borderWidth: 2,
+                    medianColor: 'rgba(54, 162, 235, 1)',
+                    outlierBackgroundColor: GOLF_COLORS.orange,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            var d = ctx.raw;
+                            if (!d) return '';
+                            return ctx.dataset.label + ': med=' + (d.median || 0).toFixed(1) +
+                                   ', IQR=[' + (d.q1 || 0).toFixed(1) + '-' + (d.q3 || 0).toFixed(1) + ']';
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Club' },
+                    ticks: {
+                        color: labelColors,
+                        font: function (ctx) {
+                            var idx = ctx.index;
+                            if (idx !== undefined && clubs[idx] && data.clubs[clubs[idx]] && data.clubs[clubs[idx]].high_variance) {
+                                return { weight: 'bold' };
+                            }
+                            return {};
+                        },
+                    },
+                },
+                y: { title: { display: true, text: 'Value' }, beginAtZero: false },
+            },
+        },
+        plugins: [{
+            id: 'highVarianceBadge',
+            afterDraw: function (chart) {
+                if (!highVarClubs.length) return;
+                var ctx = chart.ctx;
+                var xAxis = chart.scales.x;
+                var yAxis = chart.scales.y;
+                ctx.save();
+                ctx.font = 'bold 9px "Segoe UI", Arial, sans-serif';
+                ctx.textAlign = 'center';
+
+                clubs.forEach(function (c, i) {
+                    if (!data.clubs[c].high_variance) return;
+                    var x = xAxis.getPixelForValue(i);
+                    var y = yAxis.top - 4;
+                    ctx.fillStyle = 'rgba(220, 53, 69, 0.85)';
+                    var tw = ctx.measureText('\u26a0 HIGH VAR').width + 6;
+                    ctx.beginPath();
+                    ctx.roundRect(x - tw / 2, y - 12, tw, 14, 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#fff';
+                    ctx.fillText('\u26a0 HIGH VAR', x, y - 1);
+                });
+                ctx.restore();
+            },
+        }],
+    });
+
+    // Correlation analysis note
+    if (notesEl) {
+        var notes = [];
+        if (data.correlation) notes.push(data.correlation);
+        highVarClubs.forEach(function (c) {
+            var analysis = data.clubs[c].analysis;
+            if (analysis) notes.push(c + ': ' + analysis);
+        });
+        notesEl.textContent = notes.join(' | ') || '';
+    }
 }
