@@ -370,15 +370,71 @@ document.addEventListener('DOMContentLoaded', function() {
         var excludeAllBtn = document.getElementById('exclude-all-suggested');
         var dismissedIds = {};  // session-only dismiss tracking
 
-        fetch('/api/shots/suggested-exclusions')
-            .then(function(r) { return r.ok ? r.json() : []; })
+        // Build query params from current filters
+        var suggestParams = new URLSearchParams();
+        var sessionVal = document.getElementById('filter-session').value;
+        if (sessionVal) suggestParams.set('session_id', sessionVal);
+
+        var clubBtns = document.querySelectorAll('#club-toggle-group .club-toggle-btn');
+        var activeClubs = [];
+        clubBtns.forEach(function(b) {
+            if (b.getAttribute('data-active') === '1') activeClubs.push(b.getAttribute('data-club'));
+        });
+        if (activeClubs.length && activeClubs.length < clubBtns.length) {
+            suggestParams.set('club', activeClubs.join(','));
+        }
+
+        var dateRadio = document.querySelector('#shots-date-range-group input[type="radio"]:checked');
+        if (dateRadio && dateRadio.value) {
+            suggestParams.set('date_range', dateRadio.value);
+        }
+
+        var suggestUrl = '/api/shots/suggested-exclusions';
+        if (suggestParams.toString()) suggestUrl += '?' + suggestParams.toString();
+
+        fetch(suggestUrl)
+            .then(function(r) { return r.ok ? r.json() : {}; })
             .then(function(data) {
-                var items = Array.isArray(data) ? data : [];
+                // API returns { outliers: { club: [shots...] }, total_count }
+                var outliersByClub = (data && data.outliers) ? data.outliers : {};
+                var items = [];
+                Object.keys(outliersByClub).forEach(function(club) {
+                    outliersByClub[club].forEach(function(shot) {
+                        items.push({
+                            id: shot.shot_id,
+                            club: club,
+                            carry: shot.carry,
+                            offline: shot.offline,
+                            reasons: shot.reasons || [],
+                            carry_bounds: shot.carry_bounds,
+                            direction_bounds: shot.direction_bounds
+                        });
+                    });
+                });
                 if (!items.length) return;
                 renderSuggestions(items);
                 wrapper.style.display = '';
             })
             .catch(function() {});
+
+        function formatReason(item) {
+            var parts = [];
+            item.reasons.forEach(function(r) {
+                if (r.indexOf('carry') !== -1 && item.carry_bounds) {
+                    if (item.carry < item.carry_bounds.lower) {
+                        parts.push('Low carry (' + item.carry.toFixed(0) + ' < ' + item.carry_bounds.lower.toFixed(0) + ')');
+                    } else {
+                        parts.push('High carry (' + item.carry.toFixed(0) + ' > ' + item.carry_bounds.upper.toFixed(0) + ')');
+                    }
+                } else if (r.indexOf('direction') !== -1 && item.direction_bounds) {
+                    var dir = item.offline < 0 ? 'Left' : 'Right';
+                    parts.push('Extreme ' + dir + ' (' + Math.abs(item.offline).toFixed(1) + 'yd)');
+                } else {
+                    parts.push(r);
+                }
+            });
+            return parts.join(', ') || 'Outlier';
+        }
 
         function renderSuggestions(items) {
             var visible = items.filter(function(s) { return !dismissedIds[s.id]; });
@@ -387,11 +443,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!visible.length) { wrapper.style.display = 'none'; return; }
             visible.forEach(function(s) {
                 var tr = document.createElement('tr');
+                var reasonHtml = formatReason(s);
                 tr.innerHTML =
-                    '<td class="fw-semibold">' + (s.club || s.club_short || '') + '</td>' +
-                    '<td>' + (s.carry != null ? s.carry.toFixed(1) : '—') + '</td>' +
-                    '<td>' + (s.offline != null ? s.offline.toFixed(1) : '—') + '</td>' +
-                    '<td><span class="badge bg-info bg-opacity-75">' + (s.reason || 'Outlier') + '</span></td>' +
+                    '<td class="fw-semibold">' + s.club + '</td>' +
+                    '<td>' + (s.carry != null ? s.carry.toFixed(1) : '&#8212;') + '</td>' +
+                    '<td>' + (s.offline != null ? s.offline.toFixed(1) : '&#8212;') + '</td>' +
+                    '<td><span class="badge bg-info bg-opacity-75">' + reasonHtml + '</span></td>' +
                     '<td class="text-end">' +
                         '<button class="btn btn-sm btn-outline-warning me-1 suggest-exclude" data-id="' + s.id + '" title="Exclude"><i class="bi bi-eye-slash"></i></button>' +
                         '<button class="btn btn-sm btn-outline-secondary suggest-dismiss" data-id="' + s.id + '" title="Dismiss"><i class="bi bi-x-lg"></i></button>' +
