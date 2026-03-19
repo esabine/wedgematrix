@@ -205,7 +205,7 @@ function initDispersionChart(data) {
                 },
                 y: {
                     title: { display: true, text: 'Carry (yards)' },
-                    beginAtZero: false,
+                    min: 0,
                 },
             },
         },
