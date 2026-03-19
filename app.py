@@ -411,36 +411,22 @@ def register_routes(app):
             iqr_multiplier=iqr_multiplier,
         )
 
-        # Flatten to sorted array — frontend expects [{id, club, carry, offline, reason}, ...]
-        items = []
-        seen_clubs = set()
+        # Sort clubs by CLUB_ORDER for consistent frontend display
+        ordered = {}
         for c in CLUB_ORDER:
             if c in outliers:
-                seen_clubs.add(c)
-                for o in outliers[c]:
-                    items.append({
-                        'id': o['shot_id'],
-                        'club': c,
-                        'carry': o['carry'],
-                        'offline': o['offline'],
-                        'reason': ', '.join(o['reasons']),
-                        'carry_bounds': o.get('carry_bounds'),
-                        'direction_bounds': o.get('direction_bounds'),
-                    })
+                ordered[c] = outliers[c]
+        # Include any clubs not in CLUB_ORDER at the end
         for c in outliers:
-            if c not in seen_clubs:
-                for o in outliers[c]:
-                    items.append({
-                        'id': o['shot_id'],
-                        'club': c,
-                        'carry': o['carry'],
-                        'offline': o['offline'],
-                        'reason': ', '.join(o['reasons']),
-                        'carry_bounds': o.get('carry_bounds'),
-                        'direction_bounds': o.get('direction_bounds'),
-                    })
+            if c not in ordered:
+                ordered[c] = outliers[c]
 
-        return jsonify(items)
+        total_count = sum(len(v) for v in ordered.values())
+        return jsonify({
+            'outliers': ordered,
+            'total_count': total_count,
+            'iqr_multiplier': iqr_multiplier,
+        })
 
     # ──────────────────────────────────────────────
     # Batch import routes
