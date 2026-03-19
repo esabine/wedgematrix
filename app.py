@@ -557,7 +557,16 @@ def register_routes(app):
             return jsonify(shot_shape_data(session_id=session_id, club_short=clubs, date_from=date_from))
         elif chart_type == 'carry-distribution':
             # Frontend expects dict keyed by club: {club: {values, min, q1, median, q3, max, count}}
-            return jsonify(carry_distribution(session_id=session_id, club_short=clubs, date_from=date_from, percentile=percentile))
+            raw = carry_distribution(session_id=session_id, club_short=clubs, date_from=date_from, percentile=percentile)
+            # Sort by CLUB_ORDER for consistent display
+            ordered = {}
+            for c in CLUB_ORDER:
+                if c in raw:
+                    ordered[c] = raw[c]
+            for c in raw:
+                if c not in ordered:
+                    ordered[c] = raw[c]
+            return jsonify(ordered)
         elif chart_type == 'club-comparison':
             stats = per_club_statistics(session_id=session_id, percentile=percentile, date_from=date_from, clubs=clubs)
             result = []
@@ -574,7 +583,15 @@ def register_routes(app):
         elif chart_type == 'loft-analysis':
             return jsonify(analyze_loft(session_id=session_id, club_short=clubs, date_from=date_from))
         elif chart_type == 'loft-summary':
-            return jsonify(loft_summary(session_id=session_id, date_from=date_from))
+            raw = loft_summary(session_id=session_id, date_from=date_from)
+            ordered = {}
+            for c in CLUB_ORDER:
+                if c in raw:
+                    ordered[c] = raw[c]
+            for c in raw:
+                if c not in ordered:
+                    ordered[c] = raw[c]
+            return jsonify(ordered)
         elif chart_type == 'errant-flags':
             if session_id is None:
                 return jsonify({'error': 'session_id required'}), 400
