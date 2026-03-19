@@ -558,13 +558,6 @@ def register_routes(app):
         elif chart_type == 'carry-distribution':
             # Frontend expects dict keyed by club: {club: {values, min, q1, median, q3, max, count}}
             return jsonify(carry_distribution(session_id=session_id, club_short=clubs, date_from=date_from, percentile=percentile))
-        elif chart_type == 'loft-trend':
-            raw = analyze_loft(session_id=session_id, club_short=clubs, date_from=date_from)
-            result = [
-                {'club': r['club_short'], 'dynamic_loft': r['dynamic_loft']}
-                for r in raw if r['dynamic_loft'] is not None
-            ]
-            return jsonify(result)
         elif chart_type == 'club-comparison':
             stats = per_club_statistics(session_id=session_id, percentile=percentile, date_from=date_from, clubs=clubs)
             result = []

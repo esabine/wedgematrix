@@ -53,23 +53,18 @@ function loadAnalytics() {
     var qs = buildQueryString({ session_id: sessionId, club: clubFilter, date_range: dateRange, percentile: percentile });
 
     // Show loading state
-    var chartIds = ['chart-carry-distribution','chart-dispersion','chart-spin',
-                    'chart-loft-trend','chart-shot-shape','chart-club-comparison'];
-
     Promise.all([
         fetch('/api/analytics/carry-distribution' + qs).then(handleResponse),
         fetch('/api/analytics/dispersion' + qs).then(handleResponse),
         fetch('/api/analytics/spin-carry' + qs).then(handleResponse),
-        fetch('/api/analytics/loft-trend' + qs).then(handleResponse),
         fetch('/api/analytics/shot-shape' + qs).then(handleResponse),
         fetch('/api/analytics/club-comparison' + qs).then(handleResponse),
     ]).then(function (results) {
         initCarryDistribution(results[0]);
         initDispersionChart(results[1]);
         initSpinChart(results[2]);
-        initLoftTrend(results[3]);
-        initShotShape(results[4]);
-        initClubComparison(results[5]);
+        initShotShape(results[3]);
+        initClubComparison(results[4]);
     }).catch(function (err) {
         console.error('Analytics load error:', err);
     });
@@ -252,54 +247,6 @@ function initSpinChart(data) {
             scales: {
                 x: { title: { display: true, text: 'Roll Distance (yards)' } },
                 y: { title: { display: true, text: 'Spin Rate (rpm)' }, beginAtZero: false },
-            },
-        },
-    });
-}
-
-/* ---------- Dynamic Loft Trend ---------- */
-function initLoftTrend(data) {
-    var canvas = document.getElementById('chart-loft-trend');
-    if (!canvas) return;
-    destroyChart('loft-trend');
-
-    // Backend returns [{id, club_short, dynamic_loft, standard_loft, loft_diff, status}]
-    var items = Array.isArray(data) ? data : [];
-    if (!items.length) return;
-
-    var clubMap = {};
-    items.forEach(function (d) {
-        var club = d.club || d.club_short;
-        if (d.dynamic_loft != null) {
-            if (!clubMap[club]) clubMap[club] = [];
-            clubMap[club].push(d.dynamic_loft);
-        }
-    });
-
-    var maxLen = Math.max.apply(null, Object.values(clubMap).map(function (a) { return a.length; }));
-    var labels = Array.from({ length: maxLen }, function (_, i) { return 'Shot ' + (i + 1); });
-
-    var datasets = Object.keys(clubMap).map(function (club, i) {
-        return {
-            label: club,
-            data: clubMap[club],
-            borderColor: CLUB_PALETTE[i % CLUB_PALETTE.length],
-            backgroundColor: 'transparent',
-            borderWidth: 2,
-            tension: 0.3,
-            pointRadius: 3,
-        };
-    });
-
-    chartInstances['loft-trend'] = new Chart(canvas, {
-        type: 'line',
-        data: { labels: labels, datasets: datasets },
-        options: {
-            responsive: true,
-            plugins: { legend: { position: 'top' } },
-            scales: {
-                x: { title: { display: true, text: 'Shot Number' } },
-                y: { title: { display: true, text: 'Dynamic Loft (\u00b0)' } },
             },
         },
     });
