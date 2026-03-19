@@ -47,3 +47,12 @@
 - **Group selection UI:** Import page now has "First N" group select control (configurable, default 5) plus "Import Tagged Shots" button. Wedge flow uses batch API with incremental imports; club flow keeps the existing form submit.
 - **Frontend batch flow:** import.js tracks `batchSessionId` across calls. After each batch import, tagged rows are removed from DOM, remaining count updates. When all rows imported, shows "All done" with link to session.
 - **Template split:** Wedge data type shows batch import controls; club data type shows the original "Save Import" button. No regression for club imports.
+
+### 2026-03-19 — Multi-Club Analytics Fix + Percentile + Shots Pagination
+- **Multi-club bug root cause:** Frontend sends comma-separated club names (`PW,AW,SW`) via query param `club`. Backend did `Shot.club_short == "PW,AW,SW"` exact match — never matched. Fixed by parsing commas into a list and using `Shot.club_short.in_(list)` in `get_shots_query()`.
+- **List-safe pattern:** `get_shots_query()` and `analyze_loft()` now accept `club_short` as either a string or a list. `isinstance(club_short, (list, tuple))` gates the `in_()` filter. Backward-compatible with all existing single-string callers.
+- **per_club_statistics clubs param:** Added optional `clubs` param to filter which clubs are computed. Used by club-comparison chart to respect multi-club selection.
+- **Percentile in analytics API:** All analytics endpoints read `percentile` query param (default 75). `carry_distribution()` uses it for the Q3 calculation. `club-comparison` passes it to `per_club_statistics`. Response includes `percentile` metadata.
+- **Shots page pagination:** Added server-side pagination (default 50/page, max 200). Uses `offset/limit` instead of `.all()`. Added date range filter, per-page selector, and converted club toggles from client-side show/hide to server-side query params. Pagination controls render page links with smart ellipsis.
+- **Filter auto-navigate:** All shots page filters (session, swing_size, club, date_range, per_page) auto-navigate on change — no manual "Filter" button. `navigateWithFilters(page)` builds URL from current filter state.
+- **app.js guard:** `initClubToggleButtons()` now skips when shots page uses server-side pagination (detected by `shots-date-range-group` element presence).
