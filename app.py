@@ -39,6 +39,7 @@ def parse_date_range(value):
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
+    app.json.sort_keys = False  # Preserve dict insertion order for CLUB_ORDER sorting
 
     os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads'), exist_ok=True)
 
