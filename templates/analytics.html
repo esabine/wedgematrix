@@ -164,6 +164,24 @@
     <p><a href="{{ url_for('import_data') }}">Import shot data</a> to see analytics and charts.</p>
 </div>
 {% endif %}
+
+<!-- Percentile Explanation -->
+<div class="card border-0 shadow-sm mt-4 mb-3" style="background: #f0f7f4;">
+    <div class="card-body py-3">
+        <h6 class="mb-2"><i class="bi bi-info-circle text-success"></i> What Do Percentiles Mean?</h6>
+        <p class="mb-1 small">
+            A percentile tells you the distance you can <strong>reliably count on</strong>. If your 7-iron carry is <strong>P75 = 155 yards</strong>,
+            that means 75% of your shots with that club carried at least 155 yards — it's your "dependable" number for course management.
+        </p>
+        <p class="mb-1 small">
+            <strong>Lower percentiles (P25, P50)</strong> represent your most conservative estimates — useful when there's trouble short of the target.
+            <strong>Higher percentiles (P90, P95)</strong> reflect your best-case distances — useful when you need to clear a hazard or reach a par 5 in two.
+        </p>
+        <p class="mb-0 small text-muted">
+            <em>Example: With P75 selected and a 9-iron carry of 130 yards, you know that 3 out of 4 shots will fly at least 130. That's a great number for picking clubs on approach shots.</em>
+        </p>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
