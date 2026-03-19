@@ -43,3 +43,7 @@ nothing else. For the Percentile, just show the Percentile with the number, as i
 -on the club matrix, remove "My Distances" from the top.
 -add pdf to gitignore and remove any committed pdf files
 -for the chart comparing spin to carry distance, it would make more sense to compare it to the roll (total-carry)
+-on the analytics page refresh the data if a different session is selected from the drop-down
+-when printing the club matrices, remove the title above the club matrix.
+-Rewrite the "Understanding Percentiles" sections with this key principle in mind: a golfer cannot choose which percentile they hit. They swing their best every time. The shot lands where it lands. Percentiles describe the natural variation in their past shots and help them make smarter pre-shot decisions, like club selection or deciding whether to go for a green. Do not imply the golfer can "dial up" a P75 or P90 shot. Instead, frame percentiles as a planning tool based on historical tendencies. Keep the tone brief and practical, like advice from a caddie. No em dashes. Short sentences only.
+-in a previous to-do a "suggested excluded shots" feature was requested but it has not materialized yet. This is required.

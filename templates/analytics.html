@@ -195,6 +195,20 @@
             });
         });
 
+        // Wire session dropdown — reload page with session_id param
+        var sessionSelect = document.getElementById('analytics-session');
+        if (sessionSelect) {
+            sessionSelect.addEventListener('change', function() {
+                var params = new URLSearchParams(window.location.search);
+                if (this.value) {
+                    params.set('session_id', this.value);
+                } else {
+                    params.delete('session_id');
+                }
+                window.location.href = window.location.pathname + '?' + params.toString();
+            });
+        }
+
         // Wire date range radio buttons to hidden input + auto-refresh
         var radios = document.querySelectorAll('#date-range-group input[type="radio"]');
         var hidden = document.getElementById('analytics-date-range');
