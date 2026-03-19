@@ -112,3 +112,23 @@
 **Percentile explanations rewritten:** All three pages (analytics, club_matrix, wedge_matrix) now frame percentiles as a planning tool based on historical shot tendencies. Key principle: golfers can't choose which percentile to hit. No em dashes. Short sentences. Caddie-like tone with practical examples ("Water in front at 155? Check if your P75 clears it.").
 
 **Suggested exclusions fixed:** The API returns `{ outliers: { club: [shots...] }, total_count }` but the JS expected a flat array. Rewrote the fetch handler to flatten the club-keyed dict, map `shot_id`/`reasons` fields correctly, and show descriptive reason badges (e.g., "Low carry (98 < 112)", "Extreme Right (22.3yd)"). Also wired current page filters (session_id, club, date_range) into the API call so suggestions match the active filter state.
+
+### 2026-03-22 — Analytics Overhaul: Charts Added/Removed/Redesigned
+
+**Print card header removed:** Removed `.card-header-row` entirely from both club and wedge cards in `print_card.html`. Previously hidden only in print CSS; now gone from DOM. Footer row (percentile + date) is the only metadata shown.
+
+**Loft trend chart removed:** Deleted `initLoftTrend()` from `charts.js`, removed the chart container from `analytics.html`, and dropped its API call from `loadAnalytics()`. Backend endpoint also removed by Fenster.
+
+**Carry distribution redesigned for gapping:** Single bar per club (colored by club palette) at selected percentile. Gap values drawn as colored badges above each bar with a custom Chart.js plugin (`gapAnnotations`). Red = gap >20yd, amber = <5yd, green = ideal. Dashed connector lines between adjacent bars. API expected to return `gap` field per club.
+
+**Launch-Spin Stability box plot:** New chart using `@sgratzl/chartjs-chart-boxplot@4` plugin (CDN added to `base.html`). Side-by-side box plots per club for Spin Rate (green) and Launch Angle (blue). High-variance clubs get red "HIGH VAR" badge via custom `highVarianceBadge` afterDraw plugin. Correlation analysis text rendered below chart. API: `/api/analytics/launch-spin-stability`.
+
+**Radar chart vs PGA Tour:** Native Chart.js radar type. User metrics as filled green area, PGA Tour average as dashed gray outline. 6 axes normalized 0-100. Tooltips show both percentile and actual raw values. API: `/api/analytics/radar-comparison`.
+
+**Analytics layout reorganized:** Two labeled sections — "Shot Analysis" (5 charts: carry+gapping, dispersion, spin vs roll, shot shape in 2-col grid; club comparison full-width) and "Performance Analysis" (2 charts: box plot + radar, side-by-side). Total: 7 charts. All responsive via `col-lg-6`.
+
+**Key files modified:**
+- `templates/print_card.html` — header rows removed
+- `templates/analytics.html` — loft trend removed, 2 new chart containers added, layout sections
+- `templates/base.html` — chartjs-chart-boxplot CDN added
+- `static/js/charts.js` — `initLoftTrend` removed, `initCarryDistribution` redesigned, `initLaunchSpinStability` and `initRadarComparison` added, `loadAnalytics()` now fetches 7 endpoints in parallel
