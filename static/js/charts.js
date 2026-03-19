@@ -44,11 +44,13 @@ function loadAnalytics() {
     var sessionEl = document.getElementById('analytics-session');
     var clubEl = document.getElementById('analytics-club');
     var dateRangeEl = document.getElementById('analytics-date-range');
+    var percentileEl = document.getElementById('analytics-percentile');
     var sessionId = sessionEl ? sessionEl.value : '';
     var clubFilter = clubEl ? clubEl.value : '';
     var dateRange = dateRangeEl ? dateRangeEl.value : '';
+    var percentile = percentileEl ? percentileEl.value : '';
 
-    var qs = buildQueryString({ session_id: sessionId, club: clubFilter, date_range: dateRange });
+    var qs = buildQueryString({ session_id: sessionId, club: clubFilter, date_range: dateRange, percentile: percentile });
 
     // Show loading state
     var chartIds = ['chart-carry-distribution','chart-dispersion','chart-spin',

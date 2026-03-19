@@ -30,12 +30,14 @@
             <div class="col-md-3">
                 <label class="form-label form-label-sm mb-1">Percentile</label>
                 <select id="percentile-select" class="form-select form-select-sm" data-matrix="wedge">
+                    <option value="25" {% if percentile == 25 %}selected{% endif %}>P25</option>
                     <option value="50" {% if percentile == 50 %}selected{% endif %}>P50 (Median)</option>
                     <option value="60" {% if percentile == 60 %}selected{% endif %}>P60</option>
                     <option value="70" {% if percentile == 70 %}selected{% endif %}>P70</option>
                     <option value="75" {% if percentile == 75 or not percentile %}selected{% endif %}>P75 (Default)</option>
                     <option value="80" {% if percentile == 80 %}selected{% endif %}>P80</option>
                     <option value="90" {% if percentile == 90 %}selected{% endif %}>P90</option>
+                    <option value="95" {% if percentile == 95 %}selected{% endif %}>P95</option>
                 </select>
             </div>
         </div>

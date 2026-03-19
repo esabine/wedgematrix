@@ -467,28 +467,32 @@ def register_routes(app):
     @app.route('/api/analytics/<chart_type>')
     def api_analytics(chart_type):
         session_id = request.args.get('session_id', type=int)
-        club = request.args.get('club')
+        club_raw = request.args.get('club', '')
         date_range = request.args.get('date_range', '')
+        percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
         date_from = parse_date_range(date_range)
 
+        # Parse comma-separated club list; None means "all clubs"
+        clubs = [c.strip() for c in club_raw.split(',') if c.strip()] if club_raw else None
+
         if chart_type == 'dispersion':
-            return jsonify(dispersion_data(session_id=session_id, club_short=club, date_from=date_from))
+            return jsonify(dispersion_data(session_id=session_id, club_short=clubs, date_from=date_from))
         elif chart_type == 'spin-carry':
-            return jsonify(spin_vs_carry_data(session_id=session_id, club_short=club, date_from=date_from))
+            return jsonify(spin_vs_carry_data(session_id=session_id, club_short=clubs, date_from=date_from))
         elif chart_type == 'shot-shape':
-            return jsonify(shot_shape_data(session_id=session_id, club_short=club, date_from=date_from))
+            return jsonify(shot_shape_data(session_id=session_id, club_short=clubs, date_from=date_from))
         elif chart_type == 'carry-distribution':
             # Frontend expects dict keyed by club: {club: {values, min, q1, median, q3, max, count}}
-            return jsonify(carry_distribution(session_id=session_id, club_short=club, date_from=date_from))
+            return jsonify(carry_distribution(session_id=session_id, club_short=clubs, date_from=date_from, percentile=percentile))
         elif chart_type == 'loft-trend':
-            raw = analyze_loft(session_id=session_id, club_short=club, date_from=date_from)
+            raw = analyze_loft(session_id=session_id, club_short=clubs, date_from=date_from)
             result = [
                 {'club': r['club_short'], 'dynamic_loft': r['dynamic_loft']}
                 for r in raw if r['dynamic_loft'] is not None
             ]
             return jsonify(result)
         elif chart_type == 'club-comparison':
-            stats = per_club_statistics(session_id=session_id, date_from=date_from)
+            stats = per_club_statistics(session_id=session_id, percentile=percentile, date_from=date_from, clubs=clubs)
             result = []
             for c in CLUB_ORDER:
                 if c in stats:
@@ -501,7 +505,7 @@ def register_routes(app):
                     })
             return jsonify(result)
         elif chart_type == 'loft-analysis':
-            return jsonify(analyze_loft(session_id=session_id, club_short=club, date_from=date_from))
+            return jsonify(analyze_loft(session_id=session_id, club_short=clubs, date_from=date_from))
         elif chart_type == 'loft-summary':
             return jsonify(loft_summary(session_id=session_id, date_from=date_from))
         elif chart_type == 'errant-flags':

@@ -198,8 +198,11 @@ def per_club_stats(session_id, club_short):
     }
 
 
-def carry_distribution(session_id=None, club_short=None, date_from=None):
-    """Get carry distances grouped by club for box plot / histogram."""
+def carry_distribution(session_id=None, club_short=None, date_from=None, percentile=75):
+    """Get carry distances grouped by club for box plot / histogram.
+
+    percentile: the upper percentile to include (default P75).
+    """
     shots = get_shots_query(
         session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
     ).all()
@@ -217,8 +220,9 @@ def carry_distribution(session_id=None, club_short=None, date_from=None):
             'min': float(np.min(carries_arr)),
             'q1': float(np.percentile(carries_arr, 25)),
             'median': float(np.percentile(carries_arr, 50)),
-            'q3': float(np.percentile(carries_arr, 75)),
+            'q3': float(np.percentile(carries_arr, percentile)),
             'max': float(np.max(carries_arr)),
             'count': len(carries),
+            'percentile': percentile,
         }
     return result
