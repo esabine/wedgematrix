@@ -386,12 +386,8 @@ def register_routes(app):
         elif chart_type == 'shot-shape':
             return jsonify(shot_shape_data(session_id=session_id, club_short=club, date_from=date_from))
         elif chart_type == 'carry-distribution':
-            raw = carry_distribution(session_id=session_id, club_short=club, date_from=date_from)
-            flat = []
-            for club_name, stats in raw.items():
-                for v in stats['values']:
-                    flat.append({'club': club_name, 'carry': v})
-            return jsonify(flat)
+            # Frontend expects dict keyed by club: {club: {values, min, q1, median, q3, max, count}}
+            return jsonify(carry_distribution(session_id=session_id, club_short=club, date_from=date_from))
         elif chart_type == 'loft-trend':
             raw = analyze_loft(session_id=session_id, club_short=club, date_from=date_from)
             result = [

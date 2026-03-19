@@ -10,7 +10,7 @@
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-2">
         <div class="row g-2 align-items-end">
-            <div class="col-md-3">
+            <div class="col-md-3 col-lg-2">
                 <label class="form-label form-label-sm mb-1">Session</label>
                 <select id="analytics-session" class="form-select form-select-sm">
                     <option value="">All Sessions</option>
@@ -22,16 +22,21 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-2">
-                <label class="form-label form-label-sm mb-1">Club</label>
-                <select id="analytics-club" class="form-select form-select-sm">
-                    <option value="">All Clubs</option>
+            <div class="col-md-5 col-lg-4">
+                <label class="form-label form-label-sm mb-1">Clubs</label>
+                <div class="d-flex flex-wrap gap-1" id="analytics-club-toggles">
+                    <button type="button" class="btn btn-sm btn-golf club-toggle-all" id="analytics-toggle-all">All</button>
                     {% for club in clubs %}
-                    <option value="{{ club }}">{{ club }}</option>
+                    <button type="button"
+                            class="btn btn-sm club-toggle-btn btn-golf"
+                            data-club="{{ club }}" data-active="1">{{ club }}</button>
                     {% endfor %}
-                </select>
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" id="analytics-toggle-none">None</button>
+                </div>
+                <!-- Hidden input carries comma-separated active clubs to loadAnalytics -->
+                <input type="hidden" id="analytics-club" value="">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-4 col-lg-3">
                 <label class="form-label form-label-sm mb-1">Date Range</label>
                 <div class="btn-group btn-group-sm w-100" role="group" id="date-range-group">
                     <input type="radio" class="btn-check" name="dateRange" id="dr-7" value="7" autocomplete="off"
@@ -158,6 +163,69 @@
                 loadAnalytics();
             });
         });
+
+        // Club toggle buttons for analytics
+        var toggleWrap = document.getElementById('analytics-club-toggles');
+        if (toggleWrap) {
+            var clubBtns = toggleWrap.querySelectorAll('.club-toggle-btn');
+            var allBtn = document.getElementById('analytics-toggle-all');
+            var noneBtn = document.getElementById('analytics-toggle-none');
+            var clubHidden = document.getElementById('analytics-club');
+
+            function syncClubInput() {
+                var active = [];
+                clubBtns.forEach(function(b) {
+                    if (b.getAttribute('data-active') === '1') active.push(b.getAttribute('data-club'));
+                });
+                // Empty = all clubs (no filter)
+                clubHidden.value = active.length === clubBtns.length ? '' : active.join(',');
+                // Style All button
+                if (allBtn) {
+                    if (active.length === clubBtns.length) {
+                        allBtn.classList.remove('btn-outline-secondary');
+                        allBtn.classList.add('btn-golf');
+                    } else {
+                        allBtn.classList.remove('btn-golf');
+                        allBtn.classList.add('btn-outline-secondary');
+                    }
+                }
+            }
+
+            clubBtns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var on = this.getAttribute('data-active') === '1';
+                    this.setAttribute('data-active', on ? '0' : '1');
+                    this.classList.toggle('btn-golf', !on);
+                    this.classList.toggle('btn-outline-secondary', on);
+                    syncClubInput();
+                    loadAnalytics();
+                });
+            });
+
+            if (allBtn) {
+                allBtn.addEventListener('click', function() {
+                    clubBtns.forEach(function(b) {
+                        b.setAttribute('data-active', '1');
+                        b.classList.remove('btn-outline-secondary');
+                        b.classList.add('btn-golf');
+                    });
+                    syncClubInput();
+                    loadAnalytics();
+                });
+            }
+
+            if (noneBtn) {
+                noneBtn.addEventListener('click', function() {
+                    clubBtns.forEach(function(b) {
+                        b.setAttribute('data-active', '0');
+                        b.classList.remove('btn-golf');
+                        b.classList.add('btn-outline-secondary');
+                    });
+                    syncClubInput();
+                    loadAnalytics();
+                });
+            }
+        }
 
         {% if has_data %}
         loadAnalytics();
