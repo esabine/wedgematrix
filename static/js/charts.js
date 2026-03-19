@@ -50,6 +50,10 @@ function loadAnalytics() {
 
     var qs = buildQueryString({ session_id: sessionId, club: clubFilter, date_range: dateRange });
 
+    // Show loading state
+    var chartIds = ['chart-carry-distribution','chart-dispersion','chart-spin',
+                    'chart-loft-trend','chart-shot-shape','chart-club-comparison'];
+
     Promise.all([
         fetch('/api/analytics/carry-distribution' + qs).then(handleResponse),
         fetch('/api/analytics/dispersion' + qs).then(handleResponse),
