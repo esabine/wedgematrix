@@ -102,3 +102,13 @@
 **Print card sizing:** Removed fixed `height` from `#club-card` and `#wedge-card` in print.css — table height now flows naturally from row count. Width reduced 10% from 3.4" to 3.06". Both cards still fit on one letter sheet with cut guides.
 
 **Print card metadata:** Added `.card-footer-row` below each printed matrix — percentile ("P75") left-justified, today's date (mm/dd/yyyy via JS) right-justified. Thin border-top separator. Club card heading changed from "My Distances" to "Club Distances". Print route already passes `percentile` to template context.
+
+### 2026-03-21 — Analytics Session Refresh, Print Title, Percentile Rewrite, Suggested Exclusions Fix
+
+**Analytics session dropdown:** Added change event listener on `#analytics-session` that reloads the page with `?session_id=X` query param. Preserves existing URL params. Other filters (clubs, percentile, date range) continue using AJAX via `loadAnalytics()`.
+
+**Print card title hidden:** `.card-header-row` set to `display: none !important` in `@media print` in print.css. Footer row already shows percentile + date, so header row was redundant on printed cards.
+
+**Percentile explanations rewritten:** All three pages (analytics, club_matrix, wedge_matrix) now frame percentiles as a planning tool based on historical shot tendencies. Key principle: golfers can't choose which percentile to hit. No em dashes. Short sentences. Caddie-like tone with practical examples ("Water in front at 155? Check if your P75 clears it.").
+
+**Suggested exclusions fixed:** The API returns `{ outliers: { club: [shots...] }, total_count }` but the JS expected a flat array. Rewrote the fetch handler to flatten the club-keyed dict, map `shot_id`/`reasons` fields correctly, and show descriptive reason badges (e.g., "Low carry (98 < 112)", "Extreme Right (22.3yd)"). Also wired current page filters (session_id, club, date_range) into the API call so suggestions match the active filter state.
