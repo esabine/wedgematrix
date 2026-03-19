@@ -269,6 +269,7 @@ def register_routes(app):
     def analytics():
         session_id = request.args.get('session_id', type=int)
         date_range = request.args.get('date_range', '')
+        percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
         sessions = Session.query.order_by(Session.session_date.desc()).all()
         has_data = Shot.query.filter(Shot.excluded == False).count() > 0
         clubs = [r[0] for r in db.session.query(Shot.club_short).distinct().order_by(Shot.club_short).all()]
@@ -278,6 +279,7 @@ def register_routes(app):
                                has_data=has_data,
                                clubs=clubs,
                                date_range=date_range,
+                               percentile=percentile,
                                date_range_options=DATE_RANGE_OPTIONS)
 
     # ──────────────────────────────────────────────

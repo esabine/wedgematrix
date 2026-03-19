@@ -109,6 +109,8 @@ function initCarryDistribution(data) {
     var medianData = labels.map(function (c) { return data[c].median || 0; });
     var q1Data = labels.map(function (c) { return data[c].q1 || 0; });
     var q3Data = labels.map(function (c) { return data[c].q3 || 0; });
+    var pLabel = data[labels[0]] && data[labels[0]].percentile ?
+                 'P' + data[labels[0]].percentile : 'P75';
 
     chartInstances['carry-distribution'] = new Chart(canvas, {
         type: 'bar',
@@ -130,7 +132,7 @@ function initCarryDistribution(data) {
                     borderWidth: 1,
                 },
                 {
-                    label: 'P75',
+                    label: pLabel,
                     data: q3Data,
                     backgroundColor: GOLF_COLORS.greenLight,
                     borderColor: 'rgba(64, 145, 108, 1)',
@@ -400,6 +402,8 @@ function initClubComparison(data) {
     if (!items.length) return;
 
     var labels = items.map(function (d) { return d.club; });
+    var pLabel = 'P' + (document.getElementById('analytics-percentile') ?
+                        document.getElementById('analytics-percentile').value : '75');
 
     chartInstances['club-comparison'] = new Chart(canvas, {
         type: 'bar',
@@ -407,14 +411,14 @@ function initClubComparison(data) {
             labels: labels,
             datasets: [
                 {
-                    label: 'Carry (P75)',
+                    label: 'Carry (' + pLabel + ')',
                     data: items.map(function (d) { return d.carry_p75; }),
                     backgroundColor: GOLF_COLORS.green,
                     borderColor: 'rgba(45, 106, 79, 1)',
                     borderWidth: 1,
                 },
                 {
-                    label: 'Total (P75)',
+                    label: 'Total (' + pLabel + ')',
                     data: items.map(function (d) { return d.total_p75; }),
                     backgroundColor: GOLF_COLORS.blue,
                     borderColor: 'rgba(54, 162, 235, 1)',

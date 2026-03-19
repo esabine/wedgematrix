@@ -76,3 +76,13 @@
 **Print card sizing:** Club matrix resized from 2"×3.5" to 2.5"×4". Wedge matrix set to 2.5"×3". Both cards now print on a single letter-size sheet with dashed cut guides. Used ID-specific sizing (`#club-card`, `#wedge-card`) instead of single `.pocket-card` size. `@page` changed from card-size to `letter portrait`.
 
 **Batch import UX:** Reorganized controls into a clean 3-step card layout: (1) group-select with configurable count, (2) swing size dropdown, (3) "Tag & Import" button that assigns size + sends to backend in one click. Imported rows removed from DOM. "All done" section with session link appears when no rows remain. Backend `/api/import/batch` endpoint (built by Fenster) handles incremental saves with session_id tracking across batches.
+
+### 2026-03-19 — Print Scaling, Club Selector UX, Percentile UI
+
+**Print card scaling:** Both pocket cards widened 37% (2.5"→3.4") and all print font sizes doubled. Club matrix now 3.4"×4", wedge matrix 3.4"×3". Still fits on one letter-size sheet with dashed cut guides. Updated card-label preview text to match.
+
+**Club selector behavior change:** Both shots page and analytics page club toggles now use click=exclusive-select, ctrl+click=additive-toggle. "All" selects everything, "None" deselects everything. Added "None" button to shots page (analytics already had one). Uses `e.ctrlKey || e.metaKey` detection.
+
+**Percentile selector on analytics:** Added btn-group radio buttons (P25/P50/P75/P90/P95, default P75) to analytics filter bar. Hidden input `#analytics-percentile` feeds into `loadAnalytics()` which passes `?percentile=XX` to all 6 chart API endpoints. Also expanded club_matrix and wedge_matrix dropdowns with P25 and P95 options.
+
+**Percentile explanation cards:** Added light green info cards at the bottom of analytics, club_matrix, and wedge_matrix pages. Each card explains percentiles in golf terms with concrete examples (e.g., "P75 = 155 yards means 75% of shots carry at least that far"). Wedge matrix card uses wedge-specific examples (swing sizes, carry/max).

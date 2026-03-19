@@ -73,6 +73,14 @@
                 </div>
                 <input type="hidden" id="analytics-date-range" value="{{ date_range or '' }}">
             </div>
+            <div class="col-md-2 col-lg-2">
+                <label class="form-label form-label-sm mb-1">Percentile</label>
+                <select id="analytics-percentile" class="form-select form-select-sm">
+                    <option value="50" {% if percentile == 50 %}selected{% endif %}>P50</option>
+                    <option value="75" {% if not percentile or percentile == 75 %}selected{% endif %}>P75</option>
+                    <option value="90" {% if percentile == 90 %}selected{% endif %}>P90</option>
+                </select>
+            </div>
             <div class="col-md-2 col-lg-1">
                 <button id="analytics-refresh" class="btn btn-sm btn-golf w-100">
                     <i class="bi bi-arrow-clockwise"></i> Refresh
@@ -283,6 +291,14 @@
                     loadAnalytics();
                 });
             }
+        }
+
+        // Wire percentile selector to auto-refresh
+        var percentileSelect = document.getElementById('analytics-percentile');
+        if (percentileSelect) {
+            percentileSelect.addEventListener('change', function() {
+                loadAnalytics();
+            });
         }
 
         {% if has_data %}
