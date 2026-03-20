@@ -32,9 +32,9 @@
     background: #fff;
 }
 
-/* Club matrix: 3.06" wide (was 3.4", reduced 10%), height auto */
+/* Club matrix: 2.91" wide (was 3.06", reduced 5%), height auto */
 #club-card {
-    width: 3.06in;
+    width: 2.91in;
     font-size: 14pt;
 }
 
@@ -42,9 +42,9 @@
 #club-card .pocket-table th { font-size: 13pt; }
 #club-card .pocket-table td { padding: 1.5pt 3pt; }
 
-/* Wedge matrix: 3.06" wide (was 3.4", reduced 10%), height auto */
+/* Wedge matrix: 2.91" wide (was 3.06", reduced 5%), height auto */
 #wedge-card {
-    width: 3.06in;
+    width: 2.91in;
 }
 
 .card-header-row {

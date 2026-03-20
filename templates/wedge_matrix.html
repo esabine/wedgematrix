@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3"><i class="bi bi-grid"></i> Wedge Matrix</h1>
     <div class="d-flex gap-2">
-        <a href="{{ url_for('print_card') }}" class="btn btn-outline-secondary" title="Print pocket card">
+        <a href="{{ url_for('print_card') }}?percentile={{ percentile or 75 }}{% if selected_session %}&session_id={{ selected_session }}{% endif %}" class="btn btn-outline-secondary" title="Print pocket card">
             <i class="bi bi-printer"></i> Print Card
         </a>
     </div>
