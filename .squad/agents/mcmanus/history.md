@@ -154,3 +154,15 @@
 - Temporal date range 7d/30d/60d/90d/All on analytics page with chart auto-refresh (2026-03-15)
 
 **Gap fixed:** Shots page date range was missing the 60d option. Analytics had 7d/30d/60d/90d/All but shots only had 7d/30d/90d/All. Added the 60d radio button for parity.
+
+### 2026-03-22 — Shots Columns, Batch Fix, Percentile Rewrite, Print Hardening
+
+**Shot table columns:** Added computed "Roll" column (Total minus Carry) after Total. Reordered Ball Speed before Launch Angle for better visual grouping (distance metrics together, then flight metrics). Total column count: 21 (checkbox + 18 data + Excl badge + Action).
+
+**Batch exclude/include fix:** Moved batch select/exclude logic from `app.js` into `shots.html` inline script. Key changes: (1) Uses `action: 'exclude'`/`action: 'include'` string contract instead of `exclude: true/false` boolean, (2) All three required elements guarded (`selectAll`, `excludeBtn`, `includeBtn`), (3) Spinner feedback during fetch, (4) Error recovery restores button state. Added skip condition in `app.js` `initBatchSelectExclude` so it doesn't double-register on the shots page.
+
+**Percentile explanation rewrite (3rd pass):** All three pages (club_matrix, wedge_matrix, analytics) now follow the exact user spec: golfer cannot choose percentile, frame as planning tool, no em dashes, short sentences, caddie tone. Key improvement: explicitly explains WHY numbers go up — "higher percentile means picking from further up the sorted list."
+
+**Print CSS hardened:** Added `page-break-after: avoid` and `break-after: avoid` on `#club-card` to guarantee both matrices stay on the same printed sheet. Portrait orientation and same-sheet behavior were already correct via `@page { size: letter portrait; }`.
+
+**Verified already-done tasks:** Hidden shots toggle (toggle + badge + include_hidden param) and portrait pocket card orientation were already working from prior rounds.
