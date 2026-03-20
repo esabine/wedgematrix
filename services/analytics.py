@@ -355,9 +355,12 @@ def _box_plot_stats(values):
 def launch_spin_stability(session_id=None, club_short=None, date_from=None, percentile=75):
     """Compute launch-spin stability box plot data per club.
 
-    For each club, returns box plot stats for spin_rate and launch_angle.
+    For each club, returns box plot stats for spin and launch.
     High-variance clubs get additional attack_angle and ball_speed stats,
-    plus a stability diagnosis.
+    plus a stability analysis.
+
+    Returns {clubs: {club: {spin, launch, high_variance, analysis, ...}}, correlation: str}
+    matching the frontend initLaunchSpinStability() contract.
     """
     from services.club_matrix import CLUB_ORDER
 
@@ -371,6 +374,7 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
         by_club.setdefault(s.club_short, []).append(s)
 
     result = {}
+    high_var_notes = []
     for club_name, club_shots in by_club.items():
         spins = [s.spin_rate for s in club_shots if s.spin_rate is not None]
         launches = [s.launch_angle for s in club_shots if s.launch_angle is not None]
@@ -383,11 +387,11 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
 
         entry = {
             'club': club_name,
-            'spin_rate': spin_stats,
-            'launch_angle': launch_stats,
+            'spin': spin_stats,
+            'launch': launch_stats,
             'shot_count': len(club_shots),
             'high_variance': False,
-            'diagnosis': None,
+            'analysis': None,
         }
 
         # Check for high variance: IQR > median * 0.3
@@ -417,11 +421,13 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
             attack_relative_var = attack_var / attack_median if attack_median else 0
 
             if speed_relative_var > attack_relative_var:
-                entry['diagnosis'] = 'poor_strike_quality'
+                entry['analysis'] = 'Ball speed variance dominates — likely poor strike quality'
+                high_var_notes.append(f'{club_name}: poor strike quality (ball speed variance)')
             elif attack_relative_var > 0:
-                entry['diagnosis'] = 'mechanical_inconsistency'
+                entry['analysis'] = 'Attack angle variance dominates — mechanical inconsistency'
+                high_var_notes.append(f'{club_name}: mechanical inconsistency (attack angle variance)')
             else:
-                entry['diagnosis'] = 'undetermined'
+                entry['analysis'] = 'Source undetermined — review swing video'
 
         result[club_name] = entry
 
@@ -434,15 +440,26 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
         if c not in ordered:
             ordered[c] = result[c]
 
-    return ordered
+    # Build correlation summary
+    total_clubs = len(ordered)
+    high_var_count = sum(1 for v in ordered.values() if v.get('high_variance'))
+    if total_clubs == 0:
+        correlation = ''
+    elif high_var_count == 0:
+        correlation = f'All {total_clubs} clubs show stable launch-spin patterns.'
+    else:
+        correlation = f'{high_var_count} of {total_clubs} clubs show high variance. ' + '; '.join(high_var_notes)
+
+    return {'clubs': ordered, 'correlation': correlation}
 
 
 def radar_comparison(session_id=None, club_short=None, date_from=None, percentile=75):
     """Compute radar chart metrics for user data vs PGA Tour averages.
 
-    Returns per-club normalized metrics (0-100 scale) and PGA reference data.
+    Aggregates across all matching clubs and returns the format expected by
+    initRadarComparison(): {axes, user: {values, raw}, pga: {values, raw}}.
+    Uses the percentile parameter for user carry/speed calculations.
     """
-    from services.club_matrix import CLUB_ORDER
 
     # PGA Tour averages by club (published reference data)
     PGA_AVERAGES = {
@@ -472,7 +489,31 @@ def radar_comparison(session_id=None, club_short=None, date_from=None, percentil
     for s in shots:
         by_club.setdefault(s.club_short, []).append(s)
 
-    result = {}
+    if not by_club:
+        return {}
+
+    # Collect per-club scores and raw values, then average across clubs
+    metric_keys = ['carry', 'dispersion', 'spin_rate', 'launch_angle', 'ball_speed']
+    axis_labels = {'carry': 'Carry', 'dispersion': 'Dispersion',
+                   'spin_rate': 'Spin Rate', 'launch_angle': 'Launch Angle',
+                   'ball_speed': 'Ball Speed'}
+    # higher_is_better flags per metric
+    higher_better = {'carry': True, 'dispersion': False,
+                     'spin_rate': False, 'launch_angle': True, 'ball_speed': True}
+
+    per_club_scores = {k: [] for k in metric_keys}
+    per_club_raw = {k: [] for k in metric_keys}
+    per_club_pga = {k: [] for k in metric_keys}
+
+    def normalize(user_val, pga_val, higher_is_better=True):
+        if user_val is None or pga_val is None or pga_val == 0:
+            return None
+        ratio = user_val / pga_val
+        score = ratio * 100
+        if not higher_is_better:
+            score = (2 - ratio) * 100 if ratio <= 2 else 0
+        return round(min(max(score, 0), 150), 1)
+
     for club_name, club_shots in by_club.items():
         carries = [s.carry for s in club_shots if s.carry is not None]
         offlines = [abs(s.offline) for s in club_shots if s.offline is not None]
@@ -485,58 +526,57 @@ def radar_comparison(session_id=None, club_short=None, date_from=None, percentil
 
         pga = PGA_AVERAGES.get(club_name, DEFAULT_PGA)
 
-        user_carry = float(np.median(carries)) if carries else None
-        user_dispersion = float(np.median(offlines)) if offlines else None
-        user_spin = float(np.median(spins)) if spins else None
-        user_launch = float(np.median(launches)) if launches else None
-        user_speed = float(np.median(speeds)) if speeds else None
-        user_smash = None  # Club head speed not tracked
+        # Use percentile for carry and speed; median for angle/spin/dispersion
+        user_carry = float(np.percentile(carries, percentile)) if carries else None
+        user_dispersion = float(np.percentile(offlines, 50)) if offlines else None
+        user_spin = float(np.percentile(spins, 50)) if spins else None
+        user_launch = float(np.percentile(launches, 50)) if launches else None
+        user_speed = float(np.percentile(speeds, percentile)) if speeds else None
 
-        def normalize(user_val, pga_val, higher_is_better=True):
-            """Normalize user metric to 0-100 scale relative to PGA average (100 = PGA level)."""
-            if user_val is None or pga_val is None or pga_val == 0:
-                return None
-            ratio = user_val / pga_val
-            score = ratio * 100
-            if not higher_is_better:
-                score = (2 - ratio) * 100 if ratio <= 2 else 0
-            return round(min(max(score, 0), 150), 1)
+        vals = {'carry': user_carry, 'dispersion': user_dispersion,
+                'spin_rate': user_spin, 'launch_angle': user_launch,
+                'ball_speed': user_speed}
 
-        metrics = {
-            'carry': {'value': round(user_carry, 1) if user_carry else None,
-                      'pga_avg': pga['carry'],
-                      'score': normalize(user_carry, pga['carry'])},
-            'dispersion': {'value': round(user_dispersion, 1) if user_dispersion else None,
-                           'pga_avg': pga['dispersion'],
-                           'score': normalize(user_dispersion, pga['dispersion'], higher_is_better=False)},
-            'smash_factor': {'value': None,
-                             'pga_avg': pga['smash_factor'],
-                             'score': None,
-                             'note': 'Club head speed not tracked — cannot compute smash factor'},
-            'spin_rate': {'value': round(user_spin, 0) if user_spin else None,
-                          'pga_avg': pga['spin_rate'],
-                          'score': normalize(user_spin, pga['spin_rate'], higher_is_better=False)},
-            'launch_angle': {'value': round(user_launch, 1) if user_launch else None,
-                             'pga_avg': pga['launch_angle'],
-                             'score': normalize(user_launch, pga['launch_angle'])},
-            'ball_speed': {'value': round(user_speed, 1) if user_speed else None,
-                           'pga_avg': pga['ball_speed'],
-                           'score': normalize(user_speed, pga['ball_speed'])},
-        }
+        for k in metric_keys:
+            score = normalize(vals[k], pga[k], higher_better[k])
+            if score is not None:
+                per_club_scores[k].append(score)
+            if vals[k] is not None:
+                per_club_raw[k].append(vals[k])
+            per_club_pga[k].append(pga[k])
 
-        result[club_name] = {
-            'club': club_name,
-            'metrics': metrics,
-            'shot_count': len(club_shots),
-        }
+    # Build aggregated axes, user values, and PGA values
+    axes = []
+    user_values = []
+    user_raw = {}
+    pga_values = []
+    pga_raw = {}
 
-    # Sort by CLUB_ORDER
-    ordered = {}
-    for c in CLUB_ORDER:
-        if c in result:
-            ordered[c] = result[c]
-    for c in result:
-        if c not in ordered:
-            ordered[c] = result[c]
+    for k in metric_keys:
+        label = axis_labels[k]
+        axes.append(label)
 
-    return ordered
+        if per_club_scores[k]:
+            avg_score = round(float(np.mean(per_club_scores[k])), 1)
+            user_values.append(avg_score)
+        else:
+            user_values.append(None)
+
+        if per_club_raw[k]:
+            avg_raw = round(float(np.mean(per_club_raw[k])), 1)
+            user_raw[label] = avg_raw
+        else:
+            user_raw[label] = None
+
+        if per_club_pga[k]:
+            pga_values.append(100)  # PGA is always the 100 reference
+            pga_raw[label] = round(float(np.mean(per_club_pga[k])), 1)
+        else:
+            pga_values.append(100)
+            pga_raw[label] = None
+
+    return {
+        'axes': axes,
+        'user': {'values': user_values, 'raw': user_raw},
+        'pga': {'values': pga_values, 'raw': pga_raw},
+    }
