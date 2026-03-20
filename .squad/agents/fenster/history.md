@@ -95,3 +95,14 @@
 - **`/api/shots` upgraded:** Was returning all matching shots with `.all()` (no pagination, single-club only). Now supports: `page`/`per_page` (default 50, max 200), comma-separated `club` param via `.in_()`, `date_range` filter, `include_hidden` flag. Response changed from flat array to `{shots, page, per_page, total_count, total_pages}`.
 - **No frontend callers:** The `/api/shots` endpoint is not currently called by any JS — shots page uses the server-rendered route. But the API is now robust for future use.
 - **Verification of prior features:** Confirmed all three requested features (suggested exclusions, multi-club analytics, shots pagination) were already built in the 2026-03-19 session. The outlier API returns 26 outliers across 9 clubs, multi-club analytics correctly filters carry-distribution/club-comparison, and the shots page uses server-side pagination at 50/page.
+
+### 2026-03-20 — TODO Audit: All 8 Backend Items Already Resolved
+- **Dispersion origin (TODO line 32):** Frontend `initDispersionChart()` already sets `scales.y.min: 0`. Backend returns raw shot data. No backend change needed.
+- **Spin vs Roll (TODO line 45):** `spin_vs_carry_data()` already computes `roll = total - carry` and returns `{roll, spin_rate, club}`. Frontend `initSpinChart()` plots `d.roll` on x-axis. Done since 2026-03-20 session.
+- **Loft trend removed (TODO line 51):** No `loft-trend` or `loft_trend` exists anywhere in codebase. Removed in 2026-03-20 session.
+- **Carry gapping (TODO line 53):** `carry_distribution()` computes `gap` per club (q3 delta between adjacent clubs in CLUB_ORDER). Frontend renders color-coded gap badges (red >20yd, amber <5yd, green otherwise) with dashed connector lines.
+- **Session refresh (TODO line 46):** All analytics endpoints accept `session_id`. Session dropdown triggers page reload with `?session_id=N`, then `loadAnalytics()` reads it. Verified in 2026-03-19 session.
+- **Refresh button (TODO line 35):** No refresh button exists on analytics page. All controls (club toggles, percentile, date range, session) auto-trigger `loadAnalytics()`. Nothing for McManus to remove.
+- **PDF in gitignore (TODO line 44):** `*.pdf` already in `.gitignore` (line 19). `git ls-files "*.pdf"` returns empty. No tracked PDFs.
+- **Club sort order (TODO line 52):** `CLUB_ORDER = ['1W', '3W', '2H', '3H', '4i', '5i', '6i', '7i', '8i', '9i', 'PW', 'AW', 'SW', 'LW']`. Woods, Hybrids, Irons, Wedges (PW/AW/SW/LW). All dict-keyed APIs sort by this order.
+- **Test suite:** 105 passed, 3 failed (pre-existing loft analysis test failures, unchanged).
