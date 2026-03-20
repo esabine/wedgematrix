@@ -118,6 +118,15 @@ Route endpoint names match existing frontend `url_for()` references:
 - Any future JS code calling `/api/shots` must unwrap `data.shots` (not iterate `data` directly)
 - Currently no frontend callers — shots page uses server-rendered route
 
+### 16. Batch Exclude/Include Logic Moved to Shots Inline Script
+**Date:** 2026-03-22 | **Author:** McManus | **Status:** Implemented
+
+- Batch select/exclude logic for the shots page now lives in the `shots.html` inline `<script>` block, not in `app.js`
+- `app.js` `initBatchSelectExclude` skips when `shots-date-range-group` is detected (same pattern as `initClubToggleButtons`)
+- Uses `action: 'exclude'`/`action: 'include'` string contract (backend supports both string and bool)
+- Rationale: keeps all shots-page JS in one place, eliminates potential timing/scope conflicts between app.js and the inline script
+- Impact: no behavior change on other pages (no other page uses batch select)
+
 ## Governance
 
 - All meaningful changes require team consensus
