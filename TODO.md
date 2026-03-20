@@ -53,3 +53,8 @@ nothing else. For the Percentile, just show the Percentile with the number, as i
 -For the carry distance distribution, the gapping between each club is an important metric. It should be the focus of the chart.
 -in the analytics chart, add a Launch-Spin Stability Box Plot for each club. Use Spin Rate (rpm) and Launch Angle (degrees) as the primary variables. The visualization must include: (a) The Median (the center line) to identify my typical flight. (b) The Interquartile Range (IQR) (the box) to measure the stability of my core shots. (c) Whiskers and Outliers to highlight 'fliers' or 'balloon' shots. Once rendered, analyze any high-variance clusters by correlating them with Attack Angle and Ball Speed to determine if the instability is caused by poor strike quality (low smash) or mechanical inconsistencies in the swing arc.
 -in the analytics chart, add a radar (spider) chart showing 5–6 key metrics (e.g., Carry, Dispersion, Smash, Spin, Launch). Plot the percentile vs. a "PGA Tour Average" to see where my biggest gaps lie
+-"Launch & Spin Stability" doesn't render any data
+-"My Shots vs PGA Tour Average" doesn't render any data
+-multiple charts on the Analytics tab do not seem to be affected by the percentile seection
+-when generating the matrix printable cards, the percentile showing at the time of selection is not utilized. The matrices remain at P75.
+-reduce the width of the printable matrices by 5%

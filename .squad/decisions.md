@@ -109,6 +109,15 @@ Route endpoint names match existing frontend `url_for()` references:
 - Each fix/feature from todo.md should be committed individually before moving to the next
 - Captures user's preferred workflow for incremental commits
 
+### 15. /api/shots Response Format Change
+**Date:** 2026-03-20 | **Author:** Fenster | **Status:** Implemented
+
+- `/api/shots` response changed from flat JSON array to paginated envelope: `{shots: [...], page, per_page, total_count, total_pages}`
+- Supports `club` as comma-separated list, `date_range`, `include_hidden`, `page`, `per_page`
+- Max 200 per page to prevent memory spikes
+- Any future JS code calling `/api/shots` must unwrap `data.shots` (not iterate `data` directly)
+- Currently no frontend callers — shots page uses server-rendered route
+
 ## Governance
 
 - All meaningful changes require team consensus

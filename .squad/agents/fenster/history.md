@@ -89,3 +89,9 @@
 - McManus removed `.card-header-row` from `print_card.html` and fixed percentile passthrough on print links
 - Print card width reduced 5% (3.06" → 2.91")
 - These changes work with our chart response format updates to ensure percentile is correctly displayed on printed cards
+
+### 2026-03-20 — Performance Indexes + API Shots Pagination
+- **Database indexes:** Added 6 indexes to `shots` table: `ix_shots_session_id`, `ix_shots_club_short`, `ix_shots_excluded` (single-column) plus `ix_shots_session_club`, `ix_shots_club_excluded`, `ix_shots_session_excluded` (composite). Defined in model `__table_args__` and applied to existing DB via `CREATE INDEX IF NOT EXISTS`.
+- **`/api/shots` upgraded:** Was returning all matching shots with `.all()` (no pagination, single-club only). Now supports: `page`/`per_page` (default 50, max 200), comma-separated `club` param via `.in_()`, `date_range` filter, `include_hidden` flag. Response changed from flat array to `{shots, page, per_page, total_count, total_pages}`.
+- **No frontend callers:** The `/api/shots` endpoint is not currently called by any JS — shots page uses the server-rendered route. But the API is now robust for future use.
+- **Verification of prior features:** Confirmed all three requested features (suggested exclusions, multi-club analytics, shots pagination) were already built in the 2026-03-19 session. The outlier API returns 26 outliers across 9 clubs, multi-club analytics correctly filters carry-distribution/club-comparison, and the shots page uses server-side pagination at 50/page.
