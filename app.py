@@ -608,20 +608,53 @@ def register_routes(app):
 
     @app.route('/api/shots')
     def api_shots():
+        """Paginated shots API with multi-club and date range filtering.
+
+        Query params:
+            session_id: optional session filter.
+            club: optional comma-separated club filter.
+            swing_size: optional swing size filter.
+            date_range: optional date range (7/30/60/90).
+            include_hidden: include excluded shots (default false).
+            page: page number (default 1).
+            per_page: results per page (default 50, max 200).
+        """
         session_id = request.args.get('session_id', type=int)
-        club = request.args.get('club')
+        club_raw = request.args.get('club', '')
         swing_size = request.args.get('swing_size')
+        date_range = request.args.get('date_range', '')
+        include_hidden = request.args.get('include_hidden', 'false').lower() == 'true'
+        page = request.args.get('page', 1, type=int)
+        per_page = min(request.args.get('per_page', 50, type=int), 200)
+        date_from = parse_date_range(date_range)
 
         q = Shot.query
+        if date_from is not None:
+            q = q.join(Session).filter(Session.session_date >= date_from)
         if session_id:
             q = q.filter(Shot.session_id == session_id)
-        if club:
-            q = q.filter(Shot.club_short == club)
+
+        club_list = [c.strip() for c in club_raw.split(',') if c.strip()] if club_raw else []
+        if club_list:
+            q = q.filter(Shot.club_short.in_(club_list))
         if swing_size:
             q = q.filter(Shot.swing_size == swing_size)
+        if not include_hidden:
+            q = q.filter(Shot.excluded == False)
 
-        shots = q.order_by(Shot.session_id, Shot.club_short, Shot.club_index).all()
-        return jsonify([s.to_dict() for s in shots])
+        total_count = q.count()
+        total_pages = max(1, (total_count + per_page - 1) // per_page)
+        shots = q.order_by(
+            Shot.session_id, Shot.club_short, Shot.club_index
+        ).offset((page - 1) * per_page).limit(per_page).all()
+
+        return jsonify({
+            'shots': [s.to_dict() for s in shots],
+            'page': page,
+            'per_page': per_page,
+            'total_count': total_count,
+            'total_pages': total_pages,
+        })
 
     @app.route('/api/lofts', methods=['POST'])
     def api_update_lofts():

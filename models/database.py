@@ -32,11 +32,16 @@ class Session(db.Model):
 
 class Shot(db.Model):
     __tablename__ = 'shots'
+    __table_args__ = (
+        db.Index('ix_shots_session_club', 'session_id', 'club_short'),
+        db.Index('ix_shots_club_excluded', 'club_short', 'excluded'),
+        db.Index('ix_shots_session_excluded', 'session_id', 'excluded'),
+    )
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    session_id = db.Column(db.Integer, db.ForeignKey('sessions.id'), nullable=False)
+    session_id = db.Column(db.Integer, db.ForeignKey('sessions.id'), nullable=False, index=True)
     club = db.Column(db.Text, nullable=False)
-    club_short = db.Column(db.Text, nullable=False)
+    club_short = db.Column(db.Text, nullable=False, index=True)
     club_index = db.Column(db.Integer, nullable=True)
     swing_size = db.Column(db.Text, nullable=False, default='full')
     ball_speed = db.Column(db.Float, nullable=True)
@@ -57,7 +62,7 @@ class Shot(db.Model):
     face_angle = db.Column(db.Float, nullable=True)
     attack_angle = db.Column(db.Float, nullable=True)
     dynamic_loft = db.Column(db.Float, nullable=True)
-    excluded = db.Column(db.Boolean, default=False)
+    excluded = db.Column(db.Boolean, default=False, index=True)
 
     def to_dict(self):
         return {
