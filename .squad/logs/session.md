@@ -41,3 +41,16 @@ All 8 items verified as already implemented in prior sessions. No code changes n
 
 ### Summary
 Most backend items verified as pre-existing. McManus fixed bulk exclude/include buttons, added Roll column, rewrote percentile text, and hardened print layout.
+
+## Batch 4 — Results
+
+### ⚛️ McManus (Frontend)
+All 4 items verified as already implemented in prior sessions:
+- Print sizing (2.91" wide, fonts doubled, auto height) ✅
+- "Club Distances" text fully removed ✅
+- Import flow working (club + wedge paths tested) ✅
+- Batch swing size tagging working (group select, tag, import, row removal) ✅
+- **One hardening fix:** Import template now uses JSON.stringify() for hidden form data instead of fragile HTML attributes (prevents breakage from special characters in filenames).
+
+### 🏁 Final TODO Tally
+ALL 60 TODO.md items have been addressed across batches 1-4 and prior sessions. The team has completed a full sweep of the backlog.
