@@ -166,3 +166,15 @@
 **Print CSS hardened:** Added `page-break-after: avoid` and `break-after: avoid` on `#club-card` to guarantee both matrices stay on the same printed sheet. Portrait orientation and same-sheet behavior were already correct via `@page { size: letter portrait; }`.
 
 **Verified already-done tasks:** Hidden shots toggle (toggle + badge + include_hidden param) and portrait pocket card orientation were already working from prior rounds.
+
+### 2026-03-22 — Verification Pass + Import Hardening
+
+**Print sizing verified:** Current state: both cards 2.91" wide, height auto. Font sizes doubled (13-14pt) from prior round. Width evolved: 2.5" → 3.4" (37% wider) → 3.06" (−10%) → 2.91" (−5%). All user adjustments applied. Club card: 14pt body/table, 13pt headers. Wedge card: 13pt body/table, 12pt headers. No changes needed.
+
+**"Club Distances" removal verified:** Searched all 10 templates — zero instances of "Club Distances" or "My Distances". The `.card-header-row` was removed from `print_card.html` DOM in a prior round. The `club_matrix.html` heading says "Club Matrix" with `no-print` class. Issue is fully resolved.
+
+**Import flow verified working:** Tested both club and wedge import paths end-to-end via Playwright browser automation. Club path: upload CSV → preview (82 shots) → Save Import → 302 redirect to session detail. Wedge path: upload CSV → preview (100 shots) → Select first 5 → set swing size → Tag & Import → "5 saved ✓, 95 remaining". All TODO line 8 issues were resolved in prior rounds.
+
+**Batch import UX verified:** Group select ("First N"), configurable group size, swing size dropdown, Tag & Import one-click flow, remaining count badge, "All done" section — all working as designed. No changes needed.
+
+**Import form hardened:** Changed hidden form fields (`session_info`, `shots_data`) from inline `value='{{ tojson }}'` to JS-populated values via `JSON.stringify()`. The old single-quoted attributes could theoretically break with filenames containing apostrophes. New approach: empty `value=""` inputs + inline `<script>` block that sets `.value = JSON.stringify({{ tojson }})`. Tested both club save (form POST) and wedge batch (fetch API) paths — both work correctly.
