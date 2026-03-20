@@ -84,3 +84,8 @@
 - **Key contract — launch-spin-stability:** Response: `{clubs: {club_name: {club, spin: box_stats, launch: box_stats, shot_count, high_variance, analysis}}, correlation: str}`. Box stats: `{min, q1, median, q3, max, mean, iqr, outliers, count}`.
 - **Key contract — radar-comparison:** Response: `{axes: ['Carry', 'Dispersion', 'Spin Rate', 'Launch Angle', 'Ball Speed'], user: {values: [float], raw: {axis_label: float}}, pga: {values: [100,...], raw: {axis_label: float}}}`. PGA values always 100 (reference line). User values 0-150 scale.
 - **Pre-existing test failures unchanged:** 3 tests in `test_loft_analysis.py` still fail (not related to these changes).
+
+### 2026-03-20 — McManus Print Card Updates (Cross-Agent Note)
+- McManus removed `.card-header-row` from `print_card.html` and fixed percentile passthrough on print links
+- Print card width reduced 5% (3.06" → 2.91")
+- These changes work with our chart response format updates to ensure percentile is correctly displayed on printed cards

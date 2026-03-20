@@ -35,3 +35,30 @@
 - Per-test in-memory SQLite ensures isolation (no cross-test bleed)
 - `_make_shot()` helper in conftest reduces boilerplate across all test modules
 - Tests are structured to be flexible on return format (dict vs list) for wedge matrix
+
+### 2026-03-20 — Chart endpoint & percentile flow tests (29 tests)
+
+**File created:**
+- `tests/test_chart_endpoints.py` — 29 tests across 3 classes
+
+**Test coverage:**
+- `TestChartEndpointsReturnData` (8 tests): launch-spin-stability, radar-comparison, carry-distribution, dispersion, spin-carry, shot-shape, club-comparison, unknown chart 404
+- `TestPercentileParameterFlow` (7 tests): P50 vs P90 carry distribution, club matrix accepts/changes with percentile, wedge matrix accepts percentile, default P75, launch-spin accepts percentile, radar accepts percentile
+- `TestEdgeCases` (14 tests): no shots, single shot, 0 and 100 percentile, multi-club selection, empty club/wedge matrix, all-excluded shots, launch-spin 3-shot minimum
+
+**Response shape discoveries:**
+- `launch_spin_stability` returns `{'clubs': {club: {spin, launch, ...}}, 'correlation': ''}` — keys are `spin`/`launch`, not `spin_rate`/`launch_angle`
+- `radar_comparison` returns `{'axes': [...], 'user': {values, raw}, 'pga': {values, raw}}` — flat structure, not per-club
+- `club_matrix` returns `{'matrix': [list of dicts]}` — matrix is a list, not a dict
+- These shape differences from the service function return values indicate the route handlers transform the data before jsonify
+
+**Key patterns:**
+- Needed a `routed_app` fixture that calls `register_routes(app)` — the existing conftest `app` fixture creates a bare Flask app without routes
+- Used `_seed_multi_club_shots()` helper with 5 shots per club (7i, PW, 1W) — enough to satisfy the 3-shot minimum for box plots
+- P0/P100 percentiles don't crash numpy — verified as safe boundary values
+- 3 pre-existing failures in `test_loft_analysis.py` are unrelated to this work
+
+### 2026-03-20 — Fenster & McManus Updates (Cross-Agent Note)
+- Fenster fixed chart API response formats (launch-spin-stability, radar-comparison) for correct percentile passthrough
+- McManus updated print card links to forward percentile params, removed header title, reduced width 5%
+- These fixes enable our test cases to validate full percentile flow through all layers
