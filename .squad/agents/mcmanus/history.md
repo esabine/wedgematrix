@@ -145,3 +145,12 @@
 - Fenster fixed launch-spin-stability and radar-comparison API response formats
 - Percentile parameter now properly flows through both endpoints
 - Our print card now receives correct percentile data to display in footer
+
+### 2026-03-22 — Club Selector / Percentile / Temporal Verification
+
+**Verification pass:** All three task requirements (club toggle UX, percentile selector, temporal filter) were already implemented in prior rounds:
+- Club toggles with All/None/click-exclusive/Ctrl+click-additive: both analytics and shots pages (2026-03-19)
+- Percentile selector P25-P95 (default P75) on analytics page with chart auto-refresh (2026-03-19)
+- Temporal date range 7d/30d/60d/90d/All on analytics page with chart auto-refresh (2026-03-15)
+
+**Gap fixed:** Shots page date range was missing the 60d option. Analytics had 7d/30d/60d/90d/All but shots only had 7d/30d/90d/All. Added the 60d radio button for parity.
