@@ -165,13 +165,14 @@
                     <th>Swing</th>
                     <th>Carry</th>
                     <th>Total</th>
+                    <th>Roll</th>
                     <th>Offl</th>
+                    <th>Ball&nbsp;Spd</th>
                     <th>L.Ang</th>
                     <th>L.Dir</th>
                     <th>Spn&nbsp;Rate</th>
                     <th>Back</th>
                     <th>Side</th>
-                    <th>Ball&nbsp;Spd</th>
                     <th>Apex</th>
                     <th>Land&deg;</th>
                     <th>Path</th>
@@ -193,15 +194,16 @@
                     <td>{{ shot.swing_size or '—' }}</td>
                     <td>{{ shot.carry|round(1) if shot.carry else '—' }}</td>
                     <td>{{ shot.total|round(1) if shot.total else '—' }}</td>
+                    <td>{{ (shot.total - shot.carry)|round(1) if shot.total and shot.carry else '—' }}</td>
                     <td class="{{ 'text-danger' if shot.offline and shot.offline|abs > 15 else '' }}">
                         {{ shot.offline|round(1) if shot.offline else '—' }}
                     </td>
+                    <td>{{ shot.ball_speed|round(1) if shot.ball_speed else '—' }}</td>
                     <td>{{ shot.launch_angle|round(1) if shot.launch_angle else '—' }}</td>
                     <td>{{ shot.launch_direction_deg|round(1) if shot.launch_direction_deg else '—' }}</td>
                     <td>{{ shot.spin_rate if shot.spin_rate else '—' }}</td>
                     <td>{{ shot.back_spin if shot.back_spin else '—' }}</td>
                     <td>{{ shot.side_spin if shot.side_spin else '—' }}</td>
-                    <td>{{ shot.ball_speed|round(1) if shot.ball_speed else '—' }}</td>
                     <td>{{ shot.apex|round(1) if shot.apex else '—' }}</td>
                     <td>{{ shot.landing_angle|round(1) if shot.landing_angle else '—' }}</td>
                     <td>{{ shot.club_path|round(1) if shot.club_path else '—' }}</td>
@@ -265,6 +267,73 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ── Batch Select & Exclude/Include ──
+    (function() {
+        var selectAll = document.getElementById('select-all');
+        var batchExcludeBtn = document.getElementById('batch-exclude-btn');
+        var batchIncludeBtn = document.getElementById('batch-include-btn');
+        var shotsTable = document.getElementById('shots-table');
+
+        if (!selectAll || !batchExcludeBtn || !batchIncludeBtn || !shotsTable) return;
+
+        selectAll.addEventListener('change', function() {
+            var checked = this.checked;
+            shotsTable.querySelectorAll('.shot-checkbox').forEach(function(cb) {
+                cb.checked = checked;
+            });
+            updateBatchState();
+        });
+
+        shotsTable.addEventListener('change', function(e) {
+            if (e.target.classList.contains('shot-checkbox')) {
+                updateBatchState();
+            }
+        });
+
+        batchExcludeBtn.addEventListener('click', function() { doBatchAction('exclude'); });
+        batchIncludeBtn.addEventListener('click', function() { doBatchAction('include'); });
+
+        function updateBatchState() {
+            var anyChecked = shotsTable.querySelectorAll('.shot-checkbox:checked').length > 0;
+            batchExcludeBtn.disabled = !anyChecked;
+            batchIncludeBtn.disabled = !anyChecked;
+        }
+
+        function doBatchAction(action) {
+            var checked = shotsTable.querySelectorAll('.shot-checkbox:checked');
+            var ids = [];
+            checked.forEach(function(cb) { ids.push(parseInt(cb.value, 10)); });
+            if (!ids.length) return;
+
+            var btn = action === 'exclude' ? batchExcludeBtn : batchIncludeBtn;
+            var origHtml = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            btn.disabled = true;
+
+            fetch('/shots/batch-exclude', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ shot_ids: ids, action: action })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    btn.innerHTML = origHtml;
+                    btn.disabled = false;
+                }
+            })
+            .catch(function() {
+                btn.innerHTML = origHtml;
+                btn.disabled = false;
+            });
+        }
+    })();
+
     // Build current filter state from URL
     function getFilterParams() {
         var params = new URLSearchParams();

@@ -144,6 +144,12 @@
         border: 0.5pt dashed #bbb;
     }
 
+    /* Keep both cards on the same page */
+    #club-card {
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+
     .pocket-card:last-child {
         margin-bottom: 0;
     }

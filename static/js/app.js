@@ -109,6 +109,9 @@ function toggleShotExclude(shotId, btn) {
 
 /* ---------- Batch Select & Exclude/Include ---------- */
 function initBatchSelectExclude() {
+    // Skip on shots page — handled by inline script with better integration
+    if (document.getElementById('shots-date-range-group')) return;
+
     var selectAll = document.getElementById('select-all');
     var excludeBtn = document.getElementById('batch-exclude-btn');
     var includeBtn = document.getElementById('batch-include-btn');
