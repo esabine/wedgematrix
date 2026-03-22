@@ -148,15 +148,15 @@ function initCarryDistribution(data) {
                         afterLabel: function (ctx) {
                             var idx = ctx.dataIndex;
                             var lines = [];
-                            // Gap to shorter club (this club's gap value)
-                            if (idx + 1 < gaps.length && gaps[idx + 1] != null) {
-                                var gNext = gaps[idx + 1];
+                            // Gap to shorter club (stored on this club)
+                            if (gaps[idx] != null) {
+                                var gNext = gaps[idx];
                                 var warn = gNext > 20 ? ' ⚠ too large' : (gNext < 5 ? ' ⚠ too small' : '');
                                 lines.push('Gap to next club: ' + gNext + 'yd' + warn);
                             }
-                            // Gap from longer club (previous club's perspective)
-                            if (gaps[idx] != null) {
-                                var gPrev = gaps[idx];
+                            // Gap from longer club (stored on previous club)
+                            if (idx > 0 && gaps[idx - 1] != null) {
+                                var gPrev = gaps[idx - 1];
                                 var warn2 = gPrev > 20 ? ' ⚠ too large' : (gPrev < 5 ? ' ⚠ too small' : '');
                                 lines.push('Gap from prev club: ' + gPrev + 'yd' + warn2);
                             }
@@ -182,7 +182,7 @@ function initCarryDistribution(data) {
                 ctx.textAlign = 'center';
 
                 for (var i = 1; i < gaps.length; i++) {
-                    var g = gaps[i];
+                    var g = gaps[i - 1];
                     if (g === null || g === undefined) continue;
 
                     var bar = meta.data[i];
