@@ -531,43 +531,56 @@ function initClubComparison(data) {
     if (!items.length) return;
 
     var labels = items.map(function (d) { return d.club; });
-    var pLabel = 'P' + (document.getElementById('analytics-percentile') ?
-                        document.getElementById('analytics-percentile').value : '75');
+    var boxData = items.map(function (d) {
+        return {
+            min: d.min,
+            q1: d.q1,
+            median: d.median,
+            q3: d.q3,
+            max: d.max,
+            mean: d.mean,
+            outliers: d.outliers || [],
+        };
+    });
 
     chartInstances['club-comparison'] = new Chart(canvas, {
-        type: 'bar',
+        type: 'boxplot',
         data: {
             labels: labels,
-            datasets: [
-                {
-                    label: 'Carry (' + pLabel + ')',
-                    data: items.map(function (d) { return d.carry_p75; }),
-                    backgroundColor: GOLF_COLORS.green,
-                    borderColor: 'rgba(45, 106, 79, 1)',
-                    borderWidth: 1,
-                },
-                {
-                    label: 'Total (' + pLabel + ')',
-                    data: items.map(function (d) { return d.total_p75; }),
-                    backgroundColor: GOLF_COLORS.blue,
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1,
-                },
-                {
-                    label: 'Max Total',
-                    data: items.map(function (d) { return d.max_total; }),
-                    backgroundColor: GOLF_COLORS.orange,
-                    borderColor: 'rgba(255, 159, 64, 1)',
-                    borderWidth: 1,
-                },
-            ],
+            datasets: [{
+                label: 'Carry Distance',
+                data: boxData,
+                backgroundColor: 'rgba(45, 106, 79, 0.3)',
+                borderColor: GOLF_COLORS.green,
+                borderWidth: 1,
+                outlierBackgroundColor: GOLF_COLORS.orange,
+                meanBackgroundColor: GOLF_COLORS.blue,
+                meanBorderColor: GOLF_COLORS.blue,
+                meanRadius: 3,
+            }],
         },
         options: {
             responsive: true,
-            plugins: { legend: { position: 'top' } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            var d = items[ctx.dataIndex];
+                            return [
+                                'Median: ' + d.median + ' yd',
+                                'Mean: ' + d.mean + ' yd',
+                                'Q1–Q3: ' + d.q1 + '–' + d.q3 + ' yd',
+                                'Range: ' + d.min + '–' + d.max + ' yd',
+                                'Shots: ' + (d.count || d.shot_count || ''),
+                            ];
+                        },
+                    },
+                },
+            },
             scales: {
                 x: { title: { display: true, text: 'Club' } },
-                y: { title: { display: true, text: 'Distance (yards)' }, beginAtZero: false },
+                y: { title: { display: true, text: 'Carry (yards)' }, beginAtZero: false },
             },
         },
     });
