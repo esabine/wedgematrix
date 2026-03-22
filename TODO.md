@@ -68,3 +68,9 @@ nothing else. For the Percentile, just show the Percentile with the number, as i
 -What is being used for the PGA tour average numbers? That feature seems incomplete.
 -The placement of the gapping numbers in the "Carry Distance & Gapping" is awkward and misleading. The gapping is between columns, not above them.
 -For the dispersion chart, the "dispersion area" should always be the 90th percentile of the data rendered in the diagram, regardless of what percentile of shots are being shown.
+-~~implement a version number that is also visibile at the bottom of every page of the ui~~ DONE
+-~~there is no gap shown between the last two clubs in the carry distance & gapping chart~~ DONE
+-~~when mousing over a shot of the dispersion pattern chart, include additional details like spin, descending loft, ball speed, face angle~~ DONE
+-~~the launch and spin stability chart: widen and break down wedges into sub-swings~~ DONE
+-~~the club comparison chart: rewrite as box and whisker plot~~ DONE
+-~~my shots vs pga tour average: add per-club dropdown~~ DONE

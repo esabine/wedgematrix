@@ -245,3 +245,27 @@ Cross-agent coordination:
 **Tooltip improvement:** Hover on any bar now shows both `Gap to next club` and `Gap from prev club` (bidirectional), not just `Gap from prev`.
 
 **Key pattern:** Canvas annotations that represent relationships (gaps, deltas) between data points should be visually positioned between those points, not on either one.
+
+---
+
+### Session: TODOs 71-76 (continued)
+
+#### TODO 73 — Dispersion Tooltip Enhancement
+Extended scatter `data` array to include `spin_rate`, `launch_angle`, `ball_speed`, `face_angle` from the backend response. Tooltip callback checks for presence before display.
+
+**Lesson:** Chart.js scatter points can carry arbitrary extra properties beyond `x`/`y`; access via `ctx.dataset.data[ctx.dataIndex].<prop>`.
+
+#### TODO 74 — Launch & Spin Stability — Wider Chart
+Simple CSS-only change: `col-lg-6` → `col-12`. Backend already handled wedge sub-swing grouping (hockney's work).
+
+**Lesson:** Before touching JS, check whether the fix is purely layout. A one-class change in the template was all that was needed.
+
+#### TODO 75 — Club Comparison as Box & Whisker
+Rewrote `initClubComparison()` from grouped bar chart to `type: 'boxplot'` using `@sgratzl/chartjs-chart-boxplot@4`. Backend already provides `min/q1/median/q3/max/outliers/mean`. Mapped to `{min, q1, median, q3, max, outliers, mean}` objects.
+
+**Lesson:** The boxplot plugin expects data items as objects with statistical fields, not arrays. Tooltip customization uses `ctx.parsed` which has `.min`, `.q1`, `.median`, etc.
+
+#### TODO 76 — PGA Tour Radar Comparison per-club
+Added `<select id="radar-club-select">` to the card header. `initRadarComparison()` populates dropdown from `data.clubs_used`, defaults to "All Clubs". `select.onchange` calls inner `renderRadar(clubKey)` which destroys and recreates the chart with the selected club's `per_club` data.
+
+**Lesson:** When a chart needs a control (dropdown, toggle), wire it inside the init function so the data closure is available without globals. Destroy-and-recreate is simpler than `chart.update()` for radar type changes.
