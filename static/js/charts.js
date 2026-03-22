@@ -280,7 +280,7 @@ function initDispersionChart(data) {
     items.forEach(function (d) {
         var club = d.club || d.club_short;
         if (!clubMap[club]) clubMap[club] = [];
-        clubMap[club].push({ x: d.offline, y: d.carry });
+        clubMap[club].push({ x: d.offline, y: d.carry, spin_rate: d.spin_rate, launch_angle: d.launch_angle, ball_speed: d.ball_speed, face_angle: d.face_angle });
     });
 
     var clubNames = Object.keys(clubMap);
@@ -358,9 +358,15 @@ function initDispersionChart(data) {
                     callbacks: {
                         label: function (ctx) {
                             if (ctx.dataset.label.endsWith(' P90')) return null;
-                            return ctx.dataset.label + ': ' +
+                            var r = ctx.raw;
+                            var lines = [ctx.dataset.label + ': ' +
                                    ctx.parsed.y + 'yd carry, ' +
-                                   ctx.parsed.x + 'yd offline';
+                                   ctx.parsed.x + 'yd offline'];
+                            if (r.ball_speed != null) lines.push('Ball Speed: ' + r.ball_speed + ' mph');
+                            if (r.launch_angle != null) lines.push('Launch: ' + r.launch_angle + '°');
+                            if (r.spin_rate != null) lines.push('Spin: ' + r.spin_rate + ' rpm');
+                            if (r.face_angle != null) lines.push('Face Angle: ' + r.face_angle + '°');
+                            return lines;
                         },
                     },
                     filter: function (item) {
