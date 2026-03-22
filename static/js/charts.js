@@ -725,83 +725,111 @@ function initRadarComparison(data) {
     if (!canvas) return;
     destroyChart('radar-comparison');
 
-    // Expected: { axes: ['Carry','Dispersion','Smash Factor','Spin Rate','Launch Angle','Ball Speed'],
-    //             user: { values: [70,55,80,60,75,65], raw: {Carry: 155, ...} },
-    //             pga:  { values: [85,75,90,80,85,80], raw: {Carry: 275, ...} } }
     if (!data || !data.axes || !data.user || !data.pga) return;
 
-    var axes = data.axes;
-    var userVals = data.user.values || [];
-    var pgaVals = data.pga.values || [];
-    var userRaw = data.user.raw || {};
-    var pgaRaw = data.pga.raw || {};
+    // Populate club dropdown
+    var select = document.getElementById('radar-club-select');
+    if (select && data.per_club) {
+        // Keep "All Clubs" option, remove old club options
+        while (select.options.length > 1) select.remove(1);
+        var clubs = data.clubs_used || Object.keys(data.per_club);
+        clubs.forEach(function (club) {
+            var opt = document.createElement('option');
+            opt.value = club;
+            opt.textContent = club;
+            select.appendChild(opt);
+        });
+        select.onchange = function () { renderRadar(select.value); };
+    }
 
-    chartInstances['radar-comparison'] = new Chart(canvas, {
-        type: 'radar',
-        data: {
-            labels: axes,
-            datasets: [
-                {
-                    label: 'My Shots',
-                    data: userVals,
-                    backgroundColor: 'rgba(45, 106, 79, 0.2)',
-                    borderColor: 'rgba(45, 106, 79, 0.9)',
-                    borderWidth: 2,
-                    pointBackgroundColor: 'rgba(45, 106, 79, 1)',
-                    pointRadius: 4,
-                    fill: true,
+    function renderRadar(clubKey) {
+        destroyChart('radar-comparison');
+        var axes, userVals, pgaVals, userRaw, pgaRaw;
+
+        if (clubKey === 'all' || !data.per_club || !data.per_club[clubKey]) {
+            axes = data.axes;
+            userVals = data.user.values || [];
+            pgaVals = data.pga.values || [];
+            userRaw = data.user.raw || {};
+            pgaRaw = data.pga.raw || {};
+        } else {
+            var pc = data.per_club[clubKey];
+            axes = data.axes;
+            userVals = pc.user || [];
+            pgaVals = pc.pga || [];
+            userRaw = {};
+            pgaRaw = {};
+        }
+
+        chartInstances['radar-comparison'] = new Chart(canvas, {
+            type: 'radar',
+            data: {
+                labels: axes,
+                datasets: [
+                    {
+                        label: clubKey === 'all' ? 'My Shots' : clubKey,
+                        data: userVals,
+                        backgroundColor: 'rgba(45, 106, 79, 0.2)',
+                        borderColor: 'rgba(45, 106, 79, 0.9)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(45, 106, 79, 1)',
+                        pointRadius: 4,
+                        fill: true,
+                    },
+                    {
+                        label: 'PGA Tour Avg',
+                        data: pgaVals,
+                        backgroundColor: 'rgba(108, 117, 125, 0.05)',
+                        borderColor: 'rgba(108, 117, 125, 0.6)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointBackgroundColor: 'rgba(108, 117, 125, 0.8)',
+                        pointRadius: 3,
+                        fill: false,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                var axis = axes[ctx.dataIndex];
+                                var percentile = ctx.parsed.r;
+                                var isUser = ctx.datasetIndex === 0;
+                                var raw = isUser ? userRaw[axis] : pgaRaw[axis];
+                                var label = ctx.dataset.label + ': ' + percentile + '/100';
+                                if (raw !== undefined && raw !== null) {
+                                    label += ' (actual: ' + raw + ')';
+                                }
+                                return label;
+                            },
+                        },
+                    },
                 },
-                {
-                    label: 'PGA Tour Avg',
-                    data: pgaVals,
-                    backgroundColor: 'rgba(108, 117, 125, 0.05)',
-                    borderColor: 'rgba(108, 117, 125, 0.6)',
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    pointBackgroundColor: 'rgba(108, 117, 125, 0.8)',
-                    pointRadius: 3,
-                    fill: false,
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        label: function (ctx) {
-                            var axis = axes[ctx.dataIndex];
-                            var percentile = ctx.parsed.r;
-                            var isUser = ctx.datasetIndex === 0;
-                            var raw = isUser ? userRaw[axis] : pgaRaw[axis];
-                            var label = ctx.dataset.label + ': ' + percentile + '/100';
-                            if (raw !== undefined && raw !== null) {
-                                label += ' (actual: ' + raw + ')';
-                            }
-                            return label;
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            backdropColor: 'transparent',
+                            color: '#999',
+                            font: { size: 10 },
+                        },
+                        grid: { color: 'rgba(0, 0, 0, 0.08)' },
+                        angleLines: { color: 'rgba(0, 0, 0, 0.08)' },
+                        pointLabels: {
+                            font: { size: 12, weight: 'bold' },
+                            color: '#333',
                         },
                     },
                 },
             },
-            scales: {
-                r: {
-                    min: 0,
-                    max: 100,
-                    ticks: {
-                        stepSize: 20,
-                        backdropColor: 'transparent',
-                        color: '#999',
-                        font: { size: 10 },
-                    },
-                    grid: { color: 'rgba(0, 0, 0, 0.08)' },
-                    angleLines: { color: 'rgba(0, 0, 0, 0.08)' },
-                    pointLabels: {
-                        font: { size: 12, weight: 'bold' },
-                        color: '#333',
-                    },
-                },
-            },
-        },
-    });
+        });
+    }
+
+    renderRadar('all');
 }
