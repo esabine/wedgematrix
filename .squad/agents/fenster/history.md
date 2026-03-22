@@ -204,3 +204,39 @@ Paired with Hockney's 27 correctness, edge case, integration, and regression tes
 - **Key architectural note:** The original code used `percentile` directly for filtering. The fix ensures boundary is always P90. If future work adds percentile filtering to scatter dots, the boundary function signature supports passing it through.
 
 **Test impact:** 212 tests pass (32 new from Hockney's `test_todo_67_70.py`). Same 3 pre-existing loft_analysis failures remain (unrelated).
+
+### 2026-03-23 — TODOs 72-76: Gapping, Tooltips, Sub-Swings, Box-Whisker, PGA Comparison
+
+**TODO 72 — Carry Gapping:**
+- Investigated the "missing gaps for last two clubs" report. Backend `carry_distribution()` already correctly computes N-1 gaps — the last club in CLUB_ORDER gets `gap: null` (no shorter club to compare against). Penultimate club gets its gap.
+- Root cause is likely FRONTEND rendering (frontend skips clubs with null gap?). No backend change needed. Kept flat dict format `{club: {values, min, q1, median, q3, max, count, percentile, gap}}`.
+
+**TODO 73 — Dispersion Tooltips:**
+- Added `spin_rate`, `launch_angle`, `ball_speed`, `face_angle` fields to each shot point in `dispersion_data()` response.
+- These enable rich tooltip display on hover. Face angle sourced from `Shot.face_angle` (can be None if not in CSV).
+
+**TODO 74 — Launch-Spin Stability Sub-Swing Breakdown:**
+- Extracted shared logic into `_build_stability_entry(label, shots)` helper that returns `(entry_dict, spin_cv, launch_cv)` tuple or None if insufficient data (<3 spin or launch values).
+- For wedge clubs (`PW, AW, SW, LW`), shots are grouped by `club_short-swing_size` (e.g., `PW-3/3`, `AW-full`). Each sub-group gets its own stability entry.
+- Non-wedge clubs unchanged — single entry per club.
+- Sort: non-wedge in CLUB_ORDER first, then wedge sub-swings grouped by club, sub-sorted by SWING_SIZES.
+- High-variance clusters and correlation computed across all entries (both wedge sub-swings and non-wedge clubs).
+
+**TODO 75 — Box-and-Whisker Club Comparison:**
+- Rewrote `/api/analytics/club-comparison` handler in `app.py`.
+- Returns LIST (not dict) — tests assert `isinstance(data, list)` and `data[0]`.
+- Each entry has BOTH backward-compat fields (`carry_p75`, `total_p75`, `max_total`, `shot_count`) AND new box-plot fields (`min`, `q1`, `median`, `q3`, `max`, `mean`, `iqr`, `outliers`, `count`).
+- **Smart sub-swing breakdown:** Only applies to wedge clubs with >1 swing type in the data. A wedge club with only one swing type keeps its plain name (e.g., `PW` not `PW-full`). This preserves backward compat for users who don't use fractional swings.
+- Uses `_box_plot_stats()` from analytics.py for IQR computation.
+
+**TODO 76 — PGA Tour Comparison Restructured:**
+- `radar_comparison()` in analytics.py now returns `per_club` breakdown alongside existing aggregated `user`/`pga` format.
+- `per_club` format: `{club: {user: {carry, dispersion, spin_rate, launch_angle, ball_speed}, pga: {...}, scores: {metric: 0-150}, shot_count}}`.
+- Kept 5-axis radar with `Dispersion` metric (old tests assert exactly 5 axes).
+- Aggregated `user`/`pga` dicts unchanged for backward compat with existing frontend radar chart.
+
+**Also:** Added `VERSION = '0.5.0'` to `app.py` (TODO 71 test requirement discovered during testing).
+
+**Key design decision — smart sub-swing grouping:** Wedge clubs are only split into sub-swing entries (e.g., `PW-3/3`, `PW-full`) when they have multiple swing types in the session. This prevents confusing labels like `PW-full` when there's nothing to differentiate.
+
+**Test impact:** 234 tests pass (31 new from Hockney's `test_todo_71_76.py`). Same pre-existing `test_loft_analysis.py` failure remains (1 test, excluded from runs).
