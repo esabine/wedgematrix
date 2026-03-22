@@ -49,6 +49,10 @@ def create_app():
 
     init_db(app)
 
+    @app.context_processor
+    def inject_version():
+        return dict(version=VERSION)
+
     with app.app_context():
         seed_club_lofts()
 
