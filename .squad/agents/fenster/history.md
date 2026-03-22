@@ -5,6 +5,26 @@
 - **Stack:** Python 3.11+, Flask, SQLite/SQLAlchemy, Pandas/NumPy, Bootstrap 5, Chart.js
 - **Created:** 2026-03-14
 
+## Core Context
+
+**Foundational Architecture & Patterns (Summarized from early sessions):**
+
+The wedgeMatrix backend is a Flask app (Python 3.11+, SQLite/SQLAlchemy) with modular services:
+- **Stack:** Flask app factory (`create_app()`), SQLAlchemy (3 tables: sessions, shots, club_lofts), Pandas/NumPy analytics, Bootstrap + Chart.js frontend
+- **CSV Pipeline:** 2-step import (POST `/import/upload` → review, POST `/import/save` → commit). CSV header row 1 is metadata, row 3 is column headers. Summary rows excluded.
+- **Core Data Contract:** Shots include club, carry (hypotenuse), offline (lateral distance), launch/spin metrics. Direction fields (launch_direction, offline, face_angle) parse R→+, L→− prefixes, handle NaN→None.
+- **Route Contracts:** All analytics endpoints return dicts keyed by club with numeric values. Frontend expects `d.club` (not `d.club_short`) + metadata keys per endpoint. Examples:
+  - `carry-distribution`: `{club: {values, min, q1, median, q3, max, count, gap}}`
+  - `club-comparison`: `{club: {carry_p75, total_p75, max_total, shot_count}}`
+  - `launch-spin-stability`: `{clubs: {club: {spin: box_stats, launch: box_stats, ...}}, correlation}`
+- **Percentile Flow:** All analytics endpoints read `percentile` query param (default 75), passed through service layer to quantile calcs. CLUB_ORDER applied at route for dict key ordering.
+- **Import Contract:** `session_info` dict {filename, date, location, data_type}, `parsed_shots` list from `parse_csv()['shots']`. Batch import API: `/api/import/batch` POST with session tracking.
+- **Outlier Detection:** IQR method (Q1−1.5×IQR to Q3+1.5×IQR) per club per metric. Response: `{outliers: {club: [{shot_id, reasons, carry, offline, ...}]}, total_count}`. Requires ≥4 shots/metric.
+- **Box Plot Helper:** `_box_plot_stats()` computes min/q1/median/q3/max/mean/iqr/outliers from sorted values. Used by launch-spin-stability, planned for club-comparison refactor.
+- **PGA Averages:** All 14 clubs covered (1W through LW) with metrics: Carry, Spin Rate, Launch Angle, Ball Speed. Values are reference baselines (100 = PGA level on radar scale, 0-150 display range).
+- **Key File Paths:** `app.py` (routes, config), `models/database.py` (schema), `services/analytics.py` (all chart functions), `services/club_matrix.py`, `services/wedge_matrix.py`, `services/loft_analysis.py`.
+- **DB Indexes:** `shots` table has 6 indexes on session_id, club_short, excluded (single + composite). Speeds up multi-club + date-range filtering.
+
 ## Learnings
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->

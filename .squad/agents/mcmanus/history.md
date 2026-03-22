@@ -5,6 +5,44 @@
 - **Stack:** Python 3.11+, Flask, SQLite/SQLAlchemy, Pandas/NumPy, Bootstrap 5, Chart.js
 - **Created:** 2026-03-14
 
+## Core Context
+
+**Frontend Architecture & Template Patterns (Summarized from early sessions):**
+
+The wedgeMatrix frontend is Bootstrap 5.3.3 with Chart.js 4.4.7 (CDN-based, no build step). Modular design with 9 templates + 3 CSS + 3 JS files:
+- **Base Structure:** `base.html` (nav + footer + content block) + `style.css` (design system) + `app.js` (common interactions). Navigation active-state via `request.endpoint` matching. Print is first-class: `print.css` with `@media print` rules.
+- **Color System:** `--golf-green: #2d6a4f` CSS custom property, applied to buttons (`.btn-golf`), tables (`.table-golf`), matrices (`.matrix-cell`).
+- **Matrix Rendering:** Both `club_matrix.html` and `wedge_matrix.html` use table-based layout with:
+  - Session selector (dropdown, auto-reload via POST to same route)
+  - Percentile selector (radio buttons 50/75/90, auto-reload)
+  - Fraction/Clock display toggle (wedge only, immediate class swap)
+  - Data-driven cells: `.matrix-cell.has-data` for styling, `{{value}}` Jinja2
+- **Shots Table:** 19 columns (Club, Carry, Total, Offline, Launch Dir, ..., Face Angle, Excluded). 0.8rem font. AJAX row toggles for exclude/include without page reload. Batch select via checkboxes (shift-click row selection). Club toggle buttons filter client-side (instant, O(1) via activeSet hash).
+- **Analytics Charts:** 6 Chart.js instances in `analytics.html` loaded via `loadAnalytics()` (Promise.all, parallel). Each chart has:
+  - Session selector (dropdown, reloads charts)
+  - Club toggles (buttons, instant reload)
+  - Temporal filter (7d/30d/60d/90d/All, radio buttons, auto-reload via `date_range` query param)
+  - Specific customizations per chart (e.g., dispersion scatter has crosshairs plugin, shot-shape has golf color palette)
+- **Import Workflow:** 3-step UI for wedge data:
+  1. Group select (configurable count, e.g., "first 5")
+  2. Swing size dropdown + "Tag & Import" button
+  3. Backend batch endpoint `/api/import/batch` creates session on first call, reuses thereafter
+  4. Rows removed from DOM after import; "All done" section shows when complete
+- **Print Output:** `print_card.html` (standalone, NO base.html for clean output):
+  - ID-specific sizing: `#club-card` (2.5"×4"), `#wedge-card` (2.5"×3")
+  - `@page { size: letter portrait }` 
+  - Dashed cut guides between cards
+  - Percentile passed via URL param `?percentile={{percentile}}`
+- **Key JS Patterns:**
+  - `app.js`: Matrix reload via fetch + replace innerHTML (simpler than AJAX form)
+  - `charts.js`: All 6 chart functions use same color palette, instances tracked in array for cleanup
+  - `import.js`: Swing size validation (all wedge shots must have sizes before submit)
+  - Shot toggles: POST to `/shots/<id>/toggle-exclude`, batch via `/shots/batch-exclude`
+- **Form Contracts:**
+  - Swing size batch tagging sends `{swing_sizes: {shot_id: size, ...}}` via hidden JSON input
+  - Club matrix reload sends `{percentile, session_id}` via form POST
+  - Exclude batch sends `{shot_ids: [...], exclude: true/false}` via JSON POST
+
 ## Learnings
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->

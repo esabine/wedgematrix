@@ -5,6 +5,50 @@
 - **Stack:** Python 3.11+, Flask, SQLite/SQLAlchemy, Pandas/NumPy, Bootstrap 5, Chart.js
 - **Created:** 2026-03-14
 
+## Core Context
+
+**Test Suite Architecture & Patterns (Summarized from early sessions):**
+
+The wedgeMatrix test suite (pytest) validates CSV parsing, analytics math, API contracts, and frontend data flows. Foundation: 79 base tests + incremental expansions per feature batch.
+- **Test Structure:** 
+  - `conftest.py` — Shared fixtures: `app` (bare Flask instance), `routed_app` (with routes registered), in-memory SQLite, sample data, real CSV file paths (session-scoped), seeded club_lofts and shot data
+  - `_make_shot()` helper — Creates minimal shot dict; reduces boilerplate across all modules
+  - `_seed_multi_club_shots()` — Creates 5 shots per club (satisfies 3-shot minimum for box plots)
+  - `_seed_wedge_shots()` — Creates wedge-only shots with swing sizes; updated per swing size refactors
+- **Core Assertions:**
+  - Percentiles verified against `numpy.percentile()` as ground truth (all P50/P75/P90 assertions grounded in numpy)
+  - Outlier detection (IQR method) validated against numpy `q1`, `q3`, `iqr` calculations
+  - Box plot stats: min/q1/median/q3/max extracted via numpy sorted values and quantile functions
+  - CSV parsing: Direction fields handle R→+, L→−, NaN→None, spaces in header names
+- **API Response Contracts (Discovered via tests):**
+  - `launch_spin_stability`: `{clubs: {club: {spin: box_stats, launch: box_stats, high_variance, analysis}}, correlation}`
+  - `radar_comparison`: `{axes, user: {values, raw}, pga: {values, raw}}`
+  - `carry_distribution`: `{club: {values, min, q1, median, q3, max, count, gap}}`
+  - `dispersion`: `{shots: [{carry, offline, spin_rate, ball_speed, ...}], dispersion_boundary: {club: [...]}}`
+  - `club_comparison`: `{club: {carry_p75, total_p75, max_total, shot_count}}` (TODO 75 spec: needs box plot format)
+- **Edge Cases Discovered:**
+  - NaN in Landing Angle for G-Wedge shots (CSV) → parser must strip/convert
+  - Carry = 0.7 (duffed shots) doesn't crash percentile; Side Spin column has L/R prefix + sign
+  - CSV header has leading space (`" Dynamic Loft"`); some files lack certain clubs entirely
+  - `_pythagorean_forward(carry, offline)` returns None for invalid data (|offline| ≥ carry); invalid shots silently dropped from dispersion
+- **Fixture Conventions:**
+  - Real CSV fixtures (session-scoped): `/data/csv_samples/*.csv` paths
+  - Per-test in-memory SQLite: No cross-test data bleed
+  - Multi-club tests: Use `_seed_multi_club_shots(5 per club)` for sufficient data for box plots
+  - Parametrized tests: When testing multiple clubs/swing sizes, use `@pytest.mark.parametrize`
+- **Patterns by Feature:**
+  - **Percentile:** All P50/P75/P90 assertions verified against numpy; default P75; boundary tests at P0/P100
+  - **Sub-swing breakdown (wedges):** Entries keyed as `"PW (3/3)"`, `"PW (full"`, etc.; non-wedges remain single entries
+  - **Box plot:** Stats include min/q1/median/q3/max/mean/iqr/outliers/count; IQR > median×0.3 flags high variance
+  - **PGA baselines:** All 14 clubs covered; wedges (PW/AW/SW/LW) have full metric coverage
+  - **Gapping:** Gap = Q3[club] − Q3[next_shorter_club] (CLUB_ORDER); null for shortest club
+- **Test Score Evolution:**
+  - Initial: 79 tests passing
+  - TODO 61-63 batch: +28 tests → 107 total
+  - TODO 64-66 batch: +47 tests (dispersion boundary + geometry) → 180 total
+  - TODO 67-70 batch: +26 tests (launch-spin + radar + gapping) → 206 total (3 pre-existing failures persist)
+  - TODO 71-76 batch: +31 tests → 239 total (4 spec tests pending TODO 71 VERSION + TODO 75 box-plot refactor)
+
 ## Learnings
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
