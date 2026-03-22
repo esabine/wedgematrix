@@ -4,9 +4,22 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3"><i class="bi bi-calendar3"></i> Sessions</h1>
-    <a href="{{ url_for('import_data') }}" class="btn btn-golf">
-        <i class="bi bi-plus-circle"></i> Import New
-    </a>
+    <div class="d-flex gap-2 align-items-center">
+        <!-- Test data visibility toggle -->
+        {% if test_data_count is defined and test_data_count > 0 %}
+        <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" role="switch" id="toggle-test-data"
+                   {% if include_test %}checked{% endif %}>
+            <label class="form-check-label small" for="toggle-test-data">
+                Show Test Data
+                <span class="badge bg-warning text-dark ms-1">{{ test_data_count }}</span>
+            </label>
+        </div>
+        {% endif %}
+        <a href="{{ url_for('import_data') }}" class="btn btn-golf">
+            <i class="bi bi-plus-circle"></i> Import New
+        </a>
+    </div>
 </div>
 
 {% if sessions %}
@@ -25,9 +38,14 @@
             </thead>
             <tbody>
                 {% for session in sessions %}
-                <tr>
+                <tr class="{% if session.is_test_data %}test-data-row{% endif %}">
                     <td class="fw-semibold">
                         {{ session.session_date.strftime('%b %d, %Y') if session.session_date else 'N/A' }}
+                        {% if session.is_test_data %}
+                        <span class="badge bg-warning text-dark ms-1" title="Test data — excluded from matrices and analytics">
+                            <i class="bi bi-flask"></i> Test
+                        </span>
+                        {% endif %}
                     </td>
                     <td>{{ session.location or 'Unknown' }}</td>
                     <td>
@@ -41,6 +59,12 @@
                     </td>
                     <td class="text-end">
                         <div class="btn-group btn-group-sm">
+                            <button type="button"
+                                    class="btn {% if session.is_test_data %}btn-warning{% else %}btn-outline-secondary{% endif %} toggle-test-btn"
+                                    data-session-id="{{ session.id }}"
+                                    title="{{ 'Remove test-data flag' if session.is_test_data else 'Mark as test data' }}">
+                                <i class="bi bi-flask"></i>
+                            </button>
                             <a href="{{ url_for('shots', session_id=session.id) }}"
                                class="btn btn-outline-secondary" title="View Shots">
                                 <i class="bi bi-eye"></i>
@@ -83,6 +107,49 @@
         </div>
     </div>
 </div>
+
+<script>
+// Toggle test-data flag via AJAX
+document.querySelectorAll('.toggle-test-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var sessionId = this.getAttribute('data-session-id');
+        var button = this;
+        button.disabled = true;
+
+        fetch('/api/sessions/' + sessionId + '/toggle-test', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                console.error('Toggle failed:', data.error);
+                button.disabled = false;
+            }
+        })
+        .catch(function(err) {
+            console.error('Toggle test data failed:', err);
+            button.disabled = false;
+        });
+    });
+});
+
+// Show/Hide test data toggle
+var testToggle = document.getElementById('toggle-test-data');
+if (testToggle) {
+    testToggle.addEventListener('change', function() {
+        var params = new URLSearchParams(window.location.search);
+        if (this.checked) {
+            params.set('include_test', '1');
+        } else {
+            params.delete('include_test');
+        }
+        window.location.href = window.location.pathname + '?' + params.toString();
+    });
+}
+</script>
 
 {% else %}
 <div class="text-center py-5 text-muted">
