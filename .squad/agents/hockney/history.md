@@ -125,3 +125,33 @@ Hockney (Tester):
 - Fixture updates for new swing names and PW column
 - Validation of DB migration idempotency
 - Final score: 133/136 passing (3 pre-existing loft failures)
+
+### 2026-03-22 — Dispersion boundary tests (TODO 64/65) — 20 new tests, 153 total passing
+
+**File created:**
+- `tests/test_dispersion_boundary.py` — 20 tests across 5 classes
+
+**Test coverage by feature:**
+
+TODO 64 (target line — frontend only): 4 regression tests
+- Dispersion endpoint returns 200
+- Shot data still present (carry/offline/club_short)
+- Empty session returns empty shots
+- Club filter works correctly
+
+TODO 65 (P90 dispersion boundary): 16 tests
+- `dispersion_boundary` key present in response (2 tests)
+- Boundary shape: ≥3 points, closed loop, valid carry/offline keys, no NaN/None (4 tests)
+- Per-club isolation: boundaries in correct carry ranges, single-club filter, multi-club filter (3 tests)
+- Edge cases: no shots → empty, 2 shots → no boundary, 3 shots → too few after percentile filter, 8+ shots → boundary, mixed counts → partial, single club selection, excluded shots don't leak (7 tests)
+
+**Key findings:**
+- Fenster already implemented TODO 65 — `compute_dispersion_boundary()` in analytics.py uses ConvexHull + CubicSpline smoothing
+- Response format changed from flat list to `{shots: [...], dispersion_boundary: {club: [{carry, offline}, ...]}}`
+- Fenster already updated the 4 existing dispersion tests in test_chart_endpoints.py for the new format
+- The P-percentile filtering (carry + offline ranges) is a natural quality gate: 3 shots and even 5 shots with tight spread don't survive double filtering. 8+ with good spread reliably produce boundaries.
+- Collinearity check (SVD) prevents degenerate boundaries
+- Boundary is closed: first point == last point (< 0.01 tolerance)
+- Excluded shots correctly excluded from boundary computation
+
+**Score:** 153/156 passing (same 3 pre-existing loft failures)

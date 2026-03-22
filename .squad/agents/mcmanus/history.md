@@ -137,6 +137,23 @@
 - **Print Card percentile passthrough:** The Print Card links on both `club_matrix.html` and `wedge_matrix.html` were navigating to `/print` with no query params, causing the pocket card to always render at the default percentile (P75). Fixed by appending `?percentile={{ percentile or 75 }}` and conditionally `&session_id={{ selected_session }}` to both links. The backend route already reads these params — they were simply never being sent.
 - **Club Matrix title hidden on print:** Added `no-print` class to the `<h1>` heading in `club_matrix.html`. The `print.css` already hides `.no-print` elements in `@media print`. This addresses the repeated TODO requests (lines 43, 47, 50) to remove titles above the club matrix. The pocket card (`print_card.html`) already had no title above the table — the `.card-header-row` was removed in a prior round.
 - **Printed matrix width reduced 5%:** Both `#club-card` and `#wedge-card` in `print.css` narrowed from 3.06in to 2.91in. Card preview labels in `print_card.html` updated to match.
+
+### 2026-03-23 — Dispersion Chart: Target Line + P90 Boundaries
+
+**TODO 64 — Target line at x=0:** Added a custom Chart.js `afterDraw` plugin (`dispersionTargetLine`) that draws a dotted vertical gray line at x=0 on the dispersion scatter chart. Labeled "Target" near the top. Uses canvas API directly — no external annotation plugin needed. Visible on all club selections.
+
+**TODO 65 — P90 dispersion boundary polygons:** The dispersion API now returns an envelope `{shots: [...], dispersion_boundary: {club: [{carry, offline}, ...]}}`. The chart function handles both the new envelope and the legacy flat array format for backward compatibility.
+
+- Each club's boundary rendered as a closed-loop polygon via `showLine: true` scatter datasets
+- Dotted line (`borderDash: [5, 5]`), 12% opacity fill, smooth `tension: 0.3`
+- Single-club view: boundary is red (`rgba(220, 53, 69)`); multi-club: matches club palette color
+- Clutter guard: boundaries only shown when ≤ 4 clubs selected (or exactly 1)
+- Boundary datasets hidden from legend and tooltips via `filter` callbacks
+- Graceful degradation: if `dispersion_boundary` is missing or a club has < 3 points, no boundary is drawn
+
+**Key patterns:**
+- Custom Chart.js plugins via `plugins: [pluginObj]` on individual chart instances (not globally registered) — keeps plugin scope tight
+- The `fillColor` regex `.replace(/[\d.]+\)$/, '0.12)')` swaps the alpha in any `rgba(...)` string to 0.12 — reusable trick for deriving transparent fills from opaque palette colors
 - **Dynamic table height (already done):** No fixed height on either card — height flows from row count. Confirmed no `height` property exists on `#club-card` or `#wedge-card`.
 - **Footer row percentile + date (already working):** The `.card-footer-row` in `print_card.html` already shows `P{{ percentile or 75 }}` left-justified and JS-generated mm/dd/yyyy date right-justified. With the percentile passthrough fix, these now display the correct selected percentile instead of always P75.
 - **Key pattern:** Print Card links must always forward the current page's filter state (percentile, session_id) as query params. The backend reads them from `request.args` — the templates just weren't passing them.

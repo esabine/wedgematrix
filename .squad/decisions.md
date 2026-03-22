@@ -147,6 +147,36 @@ Route endpoint names match existing frontend `url_for()` references:
 - **4/4 shots:** 15 shots remain in DB with swing_size='4/4' — they're real data but excluded from wedge matrix display. Visible on the shots page if filtered by swing_size.
 - **Impact:** Templates already updated by McManus — no frontend work needed. Any future import of wedge shots must use the new swing size names. The import template dropdown already shows the new values.
 
+### 19. Dispersion API Response Shape Change
+**Date:** 2026-03-22 | **Author:** Fenster | **Status:** Implemented
+
+- The `/api/analytics/dispersion` endpoint response changed from a flat array to an envelope:
+  - **Before:** `[{carry, offline, club, club_short}, ...]`
+  - **After:** `{shots: [{carry, offline, club, club_short}, ...], dispersion_boundary: {club_name: [{carry, offline}, ...]}}`
+- Adding P90 dispersion boundary data alongside the scatter points requires a structured envelope rather than a flat array. The boundary is computed per-club using convex hull + cubic spline smoothing.
+- **Frontend:** McManus already prepared `initDispersionChart()` to handle both formats (envelope and legacy array). No frontend changes needed.
+- **Tests:** 4 dispersion tests updated to expect the new envelope format.
+- **New dependency:** `scipy>=1.12` added to `requirements.txt` for ConvexHull and CubicSpline.
+- **Any future consumer** of `/api/analytics/dispersion` must unwrap `data.shots` (not iterate `data` directly).
+
+### 20. Dispersion Boundary Minimum Shot Threshold
+**Date:** 2026-03-22 | **Author:** Hockney | **Status:** Observation
+
+- The `compute_dispersion_boundary()` function uses double percentile filtering (carry range + offline range), which means a club needs **8+ well-spread shots** to reliably produce a boundary polygon.
+- 3 shots pass the initial `len(carries) < 3` gate but get filtered out by the P75 carry/offline percentile ranges.
+- 5 shots with tight spread also fail to survive the double filter.
+- This is good behavior (noisy small-sample boundaries would be misleading), but any future UI or docs should set user expectations: "dispersion areas appear when you have enough data per club."
+- **Impact:** Frontend should handle missing boundary gracefully — a club may have shots but no boundary.
+
+### 21. Dispersion Boundary Visibility and Color Rendering
+**Date:** 2026-03-23 | **Author:** McManus | **Status:** Implemented
+
+- **API response format:** `/api/analytics/dispersion` returns `{shots: [...], dispersion_boundary: {club: [{carry, offline}, ...]}}` instead of flat array. Frontend handles both formats.
+- **Boundary visibility threshold:** Boundaries shown only when ≤ 4 clubs are selected to prevent visual clutter. Single-club always shows boundary.
+- **Color contract:** Single-club boundary is red; multi-club boundaries match club scatter palette color.
+- **Boundary datasets labeled `{club} P90`** — filtered from legend and tooltips via label suffix check.
+- **Impact:** Any test asserting `isinstance(data, list)` on the dispersion endpoint needs updating to expect the new dict envelope.
+
 ## Governance
 
 - All meaningful changes require team consensus

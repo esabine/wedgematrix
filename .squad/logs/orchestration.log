@@ -1,0 +1,38 @@
+# Squad Orchestration Log
+
+## Batch 6 — Dispersion Chart Enhancements (TODOs 64-65)
+
+### Agents Deployed
+- 🔧 Fenster (Backend): P90 dispersion boundary computation
+- ⚛️ McManus (Frontend): Target line + P90 boundary rendering  
+- 🧪 Hockney (Tester): 20 new dispersion tests
+
+### TODO 64: Dispersion Target Line
+- McManus added custom Chart.js plugin drawing dotted gray vertical line at x=0
+- Labeled "Target", no external dependencies needed
+
+### TODO 65: P90 Dispersion Area
+- Fenster: Added `compute_dispersion_boundary()` to `services/analytics.py`
+  - Filters shots to percentile range on both carry + offline axes per club
+  - Computes convex hull, smooths with periodic cubic spline (60 points)
+  - API returns `{shots: [...], dispersion_boundary: {club: [{carry, offline}]}}`
+- McManus: Renders boundaries as dotted closed-loop polygon fills
+  - Red for single-club view, palette-matched for multi-club
+  - ≤4-club clutter threshold, graceful degradation when no boundary data
+- Hockney: ~8+ well-spread shots needed per club for boundary (double percentile filtering)
+
+### Files Modified
+- `services/analytics.py` — Added `compute_dispersion_boundary()`, updated dispersion endpoint
+- `app.py` — Dispersion API response now includes `dispersion_boundary`
+- `templates/analytics.html` or chart JS — Target line plugin + boundary rendering
+- `tests/test_dispersion_boundary.py` — 20 new tests
+
+### Test Results
+- 153/156 passing (same 3 pre-existing loft failures)
+- Zero regressions
+- 20 new tests all green
+
+### Decisions Made
+- Clutter threshold: boundaries shown only when ≤4 clubs selected
+- Single club boundary is red; multi-club boundaries match club color
+- Minimum ~8 well-spread shots per club needed for boundary generation
