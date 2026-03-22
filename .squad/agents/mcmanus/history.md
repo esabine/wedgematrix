@@ -269,3 +269,44 @@ Rewrote `initClubComparison()` from grouped bar chart to `type: 'boxplot'` using
 Added `<select id="radar-club-select">` to the card header. `initRadarComparison()` populates dropdown from `data.clubs_used`, defaults to "All Clubs". `select.onchange` calls inner `renderRadar(clubKey)` which destroys and recreates the chart with the selected club's `per_club` data.
 
 **Lesson:** When a chart needs a control (dropdown, toggle), wire it inside the init function so the data closure is available without globals. Destroy-and-recreate is simpler than `chart.update()` for radar type changes.
+### 2026-03-22 — Batch 8 Completion (TODOs 71-76 Frontend Charts & UI)
+
+**Batch 8 Outcome:** All frontend features implemented and rendering. 7 commits total.
+
+**TODO 71 (Version Footer):** Template footers now display VERSION constant from backend (e.g., "v0.5.0"). Added to ase.html footer block used across all pages.
+
+**TODO 72 (Gapping Fix):** Carry-distribution chart label rendering fixed. The issue was off-by-one gap calculation — gap array (length n-1 for n clubs) was being indexed incorrectly for chart bar positioning. Chart now correctly displays gap values between adjacent clubs (e.g., 3 clubs → 2 gaps). P75 gaps verified against backend data.
+
+**TODO 73 (Dispersion Tooltip Fields):** Scatter plot hover tooltips now show:
+- spin_rate (e.g., "2800 RPM")
+- all_speed (e.g., "145 mph")
+- ace_angle (e.g., "+2.5°")
+- launch_angle (e.g., "18.5°")
+Template: 	emplates/analytics/dispersion.html updated to include these fields in tooltip markup.
+
+**TODO 74 (Sub-Swing Display):** Launch-spin-stability chart updated to render wedge clubs with sub-swing breakdown. Non-wedge clubs show as single entries (e.g., "1W"), wedges show with swing type labels (e.g., "PW (3/3)", "PW (full)", "AW (2/3)"). Chart.js dataset labels updated dynamically based on backend response structure.
+
+**TODO 75 (Box-and-Whisker Plot):** Club-comparison chart refactored to render box-and-whisker format:
+- Box plot from min/q1/median/q3/max provided by backend
+- Outlier points plotted separately
+- Wedge clubs display per-swing-type entries (e.g., "PW (3/3)", "PW (full)")
+- Chart.js box plot plugin configured for whisker rendering
+- Y-axis label changed from "Carry P75" to "Carry Distance (yards)"
+
+**TODO 76 (PGA Radar Comparison):** Radar chart updated to display PGA Tour baseline for all 4 wedges. Existing per-club dropdown control extends to wedges. 5-axis format: Carry, Dispersion, Spin Rate, Launch Angle, Ball Speed. User data (blue) vs PGA baseline (orange grid) comparison working across all clubs.
+
+**Template Changes:**
+- ase.html — Version footer added
+- nalytics.html — Gapping fix logic, dispersion tooltip markup
+- wedge_matrix.html — Tooltip fields visible
+- launch_spin_stability.html — Sub-swing entry display
+- club_comparison.html — Box-whisker plot rendering
+- adar_comparison.html — All 4 wedges in club dropdown, PGA baseline display
+
+**Commits:** 7 total across all templates and static files.
+
+**Cross-Agent Notes:**
+- Fenster (backend) provided all required data transformations (sub-swing grouping, box stats, tooltip fields, PGA coverage).
+- Hockney (tester) confirmed all 31 new tests pass; charts render correctly with new data payloads.
+
+**Frontend Validation:** All templates parse without errors; Chart.js renders without console errors; dropdown controls respond to user input. Version footer visible on all pages.

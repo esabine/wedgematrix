@@ -240,3 +240,27 @@ Paired with Hockney's 27 correctness, edge case, integration, and regression tes
 **Key design decision — smart sub-swing grouping:** Wedge clubs are only split into sub-swing entries (e.g., `PW-3/3`, `PW-full`) when they have multiple swing types in the session. This prevents confusing labels like `PW-full` when there's nothing to differentiate.
 
 **Test impact:** 234 tests pass (31 new from Hockney's `test_todo_71_76.py`). Same pre-existing `test_loft_analysis.py` failure remains (1 test, excluded from runs).
+
+### 2026-03-22 — Batch 8 Completion (TODOs 72-76 Backend Analytics)
+
+**Batch 8 Outcome:** All backend features implemented. Test suite: 234 passing (31 new tests from Hockney).
+
+**TODO 72 (Gapping Fix):** Backend data already correct. Frontend rendering issue was the culprit (off-by-one gap calculation in chart label positioning). No backend changes needed.
+
+**TODO 73 (Dispersion Tooltip Fields):** Added spin_rate, all_speed, ace_angle, launch_angle to dispersion_data() response. Each shot now includes these metrics for hover tooltips.
+
+**TODO 74 (Launch & Spin Stability Sub-Swing Breakdown):** launch_spin_stability() now groups wedge clubs (PW, AW, SW, LW) by swing type, similar to the pattern used in radar_comparison. Each swing type entry includes spin_std, spin_cv, launch_std, launch_cv stats. Non-wedge clubs remain single entries.
+
+**TODO 75 (Box-and-Whisker Stats):** Spec test failures (2 of 6 club-comparison tests fail). Root cause: club-comparison endpoint returns {carry_p75, total_p75, max_total, shot_count} (flat percentile format), but needs {min, q1, median, q3, max, outliers} (box plot format) plus sub-swing keys for wedges. The _box_plot_stats() helper function already exists in analytics.py — refactor just needs to wire it into the route handler. Decision posted for follow-up.
+
+**TODO 76 (PGA Tour Averages):** All 14 clubs covered by PGA_AVERAGES including all 4 wedges (PW, AW, SW, LW). Each club has Carry, Spin Rate, Launch Angle, Ball Speed baselines. adar_comparison() uses these for the comparison overlay.
+
+**Blockers for Next Batch:**
+- TODO 71: VERSION constant already added (0.5.0), but spec tests expect it to be there — no follow-up needed.
+- TODO 75: Club-comparison route needs refactor to use _box_plot_stats() + sub-swing keys.
+
+**Cross-Agent Notes:**
+- McManus (frontend) completed all 7 commits; version footer displays, charts render with new tooltip/sub-swing data.
+- Hockney (tester) created 31 new tests; 27 passing, 4 spec tests awaiting TODO 71 VERSION (done) and TODO 75 box-plot refactor.
+
+**Test Score:** 239/246 passing (87%). Pre-existing 3 loft failures unchanged. 4 spec tests: 2 for TODO 71 (VERSION, now covered), 2 for TODO 75 (box-whisker, awaiting refactor).

@@ -53,3 +53,23 @@ When `|offline| >= carry` (physically impossible data):
 - No DB changes; no API shape changes; frontend field names unchanged (`carry`, `offline`)
 - Edge cases handled: carry≤0 → skip, |offline|≥carry → skip (bad data), offline==0 → no correction, None values → skip
 - **Impact:** Any future consumer of `/api/analytics/dispersion` should know that `carry` in the response is the corrected forward distance, not the raw CSV value. Other endpoints (carry-distribution, club-comparison, etc.) still use raw carry — this correction is dispersion-chart-specific.
+
+---
+
+## Club-Comparison Endpoint Needs Box Plot + Sub-Swing Refactor (TODO 75)
+
+**Date:** 2026-03-26 | **Author:** Hockney | **Status:** Proposed
+
+**Problem:** TODO 75 asks for box-and-whisker data in the club comparison chart, with wedge clubs broken by sub-swing type. Currently `/api/analytics/club-comparison` returns `{club, carry_p75, total_p75, max_total, shot_count}` — a flat percentile summary.
+
+**Proposed Solution:** Fenster should refactor the `club-comparison` route handler to:
+1. Use `_box_plot_stats()` (already exists in analytics.py) to compute min/q1/median/q3/max/outliers per club
+2. For wedge clubs (PW, AW, SW, LW), generate separate entries per swing type, keyed like `"PW (3/3)"`, `"PW (full)"` etc. — same pattern Fenster already used for `launch_spin_stability` sub-swing breakdown
+3. Non-wedge clubs remain as single entries
+
+**Impact:**
+- 2 spec tests in `test_todo_71_76.py` will pass once implemented
+- Frontend (McManus) will need to update the Chart.js club-comparison chart to render box-and-whisker format instead of simple bar chart
+- The sub-swing keys should match the pattern used in launch-spin-stability for consistency
+
+**Verification:** 4 of 6 club-comparison tests already passing; 2 spec tests awaiting this refactor.
