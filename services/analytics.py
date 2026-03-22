@@ -169,6 +169,7 @@ def dispersion_data(session_id=None, club_short=None, date_from=None):
 
     Carry from CSV is the hypotenuse (total ball travel).  The y-axis
     needs the true forward distance: sqrt(carry² - offline²).
+    Each point includes tooltip fields: spin_rate, launch_angle, ball_speed, face_angle.
     """
     shots = get_shots_query(
         session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
@@ -183,6 +184,10 @@ def dispersion_data(session_id=None, club_short=None, date_from=None):
             'offline': s.offline,
             'club': s.club_short,
             'club_short': s.club_short,
+            'spin_rate': s.spin_rate,
+            'launch_angle': s.launch_angle,
+            'ball_speed': s.ball_speed,
+            'face_angle': s.face_angle,
         })
     return result
 
@@ -403,112 +408,127 @@ def _coefficient_of_variation(values):
     return round(float(np.std(arr, ddof=1) / abs(mean) * 100), 2) if len(arr) > 1 else 0.0
 
 
+def _build_stability_entry(label, group_shots):
+    """Build a single stability entry for a club or club+swing_type group.
+
+    Returns None if insufficient data (< 3 spin or launch values).
+    """
+    spins = [s.spin_rate for s in group_shots if s.spin_rate is not None]
+    launches = [s.launch_angle for s in group_shots if s.launch_angle is not None]
+
+    if len(spins) < 3 or len(launches) < 3:
+        return None
+
+    spin_stats = _box_plot_stats(spins)
+    launch_stats = _box_plot_stats(launches)
+
+    spin_cv = _coefficient_of_variation(spins)
+    launch_cv = _coefficient_of_variation(launches)
+    spin_std = round(float(np.std(spins, ddof=1)), 2) if len(spins) > 1 else 0.0
+    launch_std = round(float(np.std(launches, ddof=1)), 2) if len(launches) > 1 else 0.0
+
+    entry = {
+        'club': label,
+        'spin': spin_stats,
+        'launch': launch_stats,
+        'stability': {
+            'spin_std': spin_std,
+            'spin_cv': spin_cv,
+            'launch_std': launch_std,
+            'launch_cv': launch_cv,
+        },
+        'shot_count': len(group_shots),
+        'high_variance': False,
+        'analysis': None,
+    }
+
+    # Check for high variance: IQR > median * 0.3
+    spin_high_var = spin_stats['iqr'] > spin_stats['median'] * 0.3 if spin_stats['median'] else False
+    launch_high_var = launch_stats['iqr'] > launch_stats['median'] * 0.3 if launch_stats['median'] else False
+
+    if spin_high_var or launch_high_var:
+        entry['high_variance'] = True
+
+        attacks = [s.attack_angle for s in group_shots if s.attack_angle is not None]
+        speeds = [s.ball_speed for s in group_shots if s.ball_speed is not None]
+
+        if len(attacks) >= 3:
+            entry['attack_angle'] = _box_plot_stats(attacks)
+        if len(speeds) >= 3:
+            entry['ball_speed'] = _box_plot_stats(speeds)
+
+        speed_var = entry.get('ball_speed', {}).get('iqr', 0)
+        speed_median = entry.get('ball_speed', {}).get('median', 1)
+        attack_var = entry.get('attack_angle', {}).get('iqr', 0)
+        attack_median = abs(entry.get('attack_angle', {}).get('median', 1)) or 1
+
+        speed_relative_var = speed_var / speed_median if speed_median else 0
+        attack_relative_var = attack_var / attack_median if attack_median else 0
+
+        if speed_relative_var > attack_relative_var:
+            entry['analysis'] = 'Ball speed variance dominates — likely poor strike quality'
+        elif attack_relative_var > 0:
+            entry['analysis'] = 'Attack angle variance dominates — mechanical inconsistency'
+        else:
+            entry['analysis'] = 'Source undetermined — review swing video'
+
+    return entry, spin_cv, launch_cv
+
+
 def launch_spin_stability(session_id=None, club_short=None, date_from=None, percentile=75):
     """Compute launch-spin stability metrics per club.
 
-    For each club, returns box plot stats for spin and launch, plus
-    stability metrics (std_dev, coefficient of variation) for both.
-    High-variance clubs get additional attack_angle and ball_speed stats,
-    plus a stability analysis.
+    Wedge clubs (PW, AW, SW, LW) are broken down by swing_type so
+    mixing full swings with partial swings doesn't falsely inflate variance.
+    Non-wedge clubs are reported as-is.
 
     Returns:
         {
-          clubs: {club: {spin, launch, stability, high_variance, analysis, ...}},
+          clubs: {label: {spin, launch, stability, high_variance, analysis, ...}},
           correlation: str,
           high_variance_clusters: [{club, metric, cv, std_dev, shot_count, severity}, ...]
         }
     """
     from services.club_matrix import CLUB_ORDER
+    from services.wedge_matrix import WEDGE_CLUBS
 
     shots = get_shots_query(
         session_id=session_id, club_short=club_short,
         excluded=False, date_from=date_from,
     ).all()
 
-    by_club = {}
+    # Group shots: non-wedge by club, wedge by club+swing_size
+    groups = {}
     for s in shots:
-        by_club.setdefault(s.club_short, []).append(s)
+        if s.club_short in WEDGE_CLUBS:
+            label = f'{s.club_short}-{s.swing_size}'
+            groups.setdefault(label, []).append(s)
+        else:
+            groups.setdefault(s.club_short, []).append(s)
 
     result = {}
     high_var_notes = []
-    # Collect CVs across all clubs to detect relative outliers
     all_spin_cvs = {}
     all_launch_cvs = {}
 
-    for club_name, club_shots in by_club.items():
-        spins = [s.spin_rate for s in club_shots if s.spin_rate is not None]
-        launches = [s.launch_angle for s in club_shots if s.launch_angle is not None]
-
-        if len(spins) < 3 or len(launches) < 3:
+    for label, group_shots in groups.items():
+        built = _build_stability_entry(label, group_shots)
+        if built is None:
             continue
 
-        spin_stats = _box_plot_stats(spins)
-        launch_stats = _box_plot_stats(launches)
-
-        spin_cv = _coefficient_of_variation(spins)
-        launch_cv = _coefficient_of_variation(launches)
-        spin_std = round(float(np.std(spins, ddof=1)), 2) if len(spins) > 1 else 0.0
-        launch_std = round(float(np.std(launches, ddof=1)), 2) if len(launches) > 1 else 0.0
+        entry, spin_cv, launch_cv = built
 
         if spin_cv is not None:
-            all_spin_cvs[club_name] = spin_cv
+            all_spin_cvs[label] = spin_cv
         if launch_cv is not None:
-            all_launch_cvs[club_name] = launch_cv
+            all_launch_cvs[label] = launch_cv
 
-        entry = {
-            'club': club_name,
-            'spin': spin_stats,
-            'launch': launch_stats,
-            'stability': {
-                'spin_std': spin_std,
-                'spin_cv': spin_cv,
-                'launch_std': launch_std,
-                'launch_cv': launch_cv,
-            },
-            'shot_count': len(club_shots),
-            'high_variance': False,
-            'analysis': None,
-        }
+        if entry['high_variance'] and entry['analysis']:
+            high_var_notes.append(f'{label}: {entry["analysis"]}')
 
-        # Check for high variance: IQR > median * 0.3
-        spin_high_var = spin_stats['iqr'] > spin_stats['median'] * 0.3 if spin_stats['median'] else False
-        launch_high_var = launch_stats['iqr'] > launch_stats['median'] * 0.3 if launch_stats['median'] else False
-
-        if spin_high_var or launch_high_var:
-            entry['high_variance'] = True
-
-            # Add attack angle and ball speed stats for diagnosis
-            attacks = [s.attack_angle for s in club_shots if s.attack_angle is not None]
-            speeds = [s.ball_speed for s in club_shots if s.ball_speed is not None]
-
-            if len(attacks) >= 3:
-                entry['attack_angle'] = _box_plot_stats(attacks)
-            if len(speeds) >= 3:
-                entry['ball_speed'] = _box_plot_stats(speeds)
-
-            # Diagnose: high ball speed variance → poor strike quality,
-            # high attack angle variance → mechanical inconsistency
-            speed_var = entry.get('ball_speed', {}).get('iqr', 0)
-            speed_median = entry.get('ball_speed', {}).get('median', 1)
-            attack_var = entry.get('attack_angle', {}).get('iqr', 0)
-            attack_median = abs(entry.get('attack_angle', {}).get('median', 1)) or 1
-
-            speed_relative_var = speed_var / speed_median if speed_median else 0
-            attack_relative_var = attack_var / attack_median if attack_median else 0
-
-            if speed_relative_var > attack_relative_var:
-                entry['analysis'] = 'Ball speed variance dominates — likely poor strike quality'
-                high_var_notes.append(f'{club_name}: poor strike quality (ball speed variance)')
-            elif attack_relative_var > 0:
-                entry['analysis'] = 'Attack angle variance dominates — mechanical inconsistency'
-                high_var_notes.append(f'{club_name}: mechanical inconsistency (attack angle variance)')
-            else:
-                entry['analysis'] = 'Source undetermined — review swing video'
-
-        result[club_name] = entry
+        result[label] = entry
 
     # --- High-variance cluster detection ---
-    # A club is a "cluster" if its CV is >1.5× the median CV across all clubs
     high_variance_clusters = []
 
     def _detect_clusters(cv_dict, metric_label):
@@ -516,16 +536,14 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
             return
         cv_vals = list(cv_dict.values())
         median_cv = float(np.median(cv_vals))
-        # Threshold: 1.5× median CV, with a minimum floor to avoid flagging
-        # everything when all clubs are very consistent
         threshold = max(median_cv * 1.5, 3.0)
-        for club_name, cv in cv_dict.items():
+        for lbl, cv in cv_dict.items():
             if cv > threshold:
                 severity = 'moderate' if cv < threshold * 2 else 'high'
-                entry = result.get(club_name, {})
+                entry = result.get(lbl, {})
                 entry['high_variance'] = True
                 high_variance_clusters.append({
-                    'club': club_name,
+                    'club': lbl,
                     'metric': metric_label,
                     'cv': cv,
                     'std_dev': entry.get('stability', {}).get(
@@ -538,24 +556,37 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
     _detect_clusters(all_spin_cvs, 'spin')
     _detect_clusters(all_launch_cvs, 'launch')
 
-    # Sort by CLUB_ORDER
+    # Sort: non-wedge clubs in CLUB_ORDER, then wedge sub-swings grouped by club
+    from services.wedge_matrix import SWING_SIZES
     ordered = {}
     for c in CLUB_ORDER:
-        if c in result:
-            ordered[c] = result[c]
+        if c in WEDGE_CLUBS:
+            # Insert sub-swing entries for this wedge club
+            for sw in SWING_SIZES:
+                key = f'{c}-{sw}'
+                if key in result:
+                    ordered[key] = result[key]
+            # Also include any swing sizes not in SWING_SIZES (e.g. 'full')
+            for key in result:
+                if key.startswith(f'{c}-') and key not in ordered:
+                    ordered[key] = result[key]
+        else:
+            if c in result:
+                ordered[c] = result[c]
+    # Include any remaining entries not matched
     for c in result:
         if c not in ordered:
             ordered[c] = result[c]
 
     # Build correlation summary
-    total_clubs = len(ordered)
+    total_entries = len(ordered)
     high_var_count = sum(1 for v in ordered.values() if v.get('high_variance'))
-    if total_clubs == 0:
+    if total_entries == 0:
         correlation = ''
     elif high_var_count == 0:
-        correlation = f'All {total_clubs} clubs show stable launch-spin patterns.'
+        correlation = f'All {total_entries} entries show stable launch-spin patterns.'
     else:
-        correlation = f'{high_var_count} of {total_clubs} clubs show high variance. ' + '; '.join(high_var_notes)
+        correlation = f'{high_var_count} of {total_entries} entries show high variance. ' + '; '.join(high_var_notes)
 
     return {
         'clubs': ordered,
@@ -565,31 +596,40 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
 
 
 def radar_comparison(session_id=None, club_short=None, date_from=None, percentile=75):
-    """Compute radar chart metrics for user data vs PGA Tour averages.
+    """Compute per-club comparison of user data vs PGA Tour averages.
 
-    Aggregates across all matching clubs and returns the format expected by
-    initRadarComparison(): {axes, user: {values, raw}, pga: {values, raw}}.
-    Uses the percentile parameter for user carry/speed calculations.
+    Returns per-club breakdown AND an aggregated radar so the frontend
+    can show both a summary radar and a per-club side-by-side comparison.
+
+    Response:
+        {
+          axes: ['Carry', 'Dispersion', 'Spin Rate', 'Launch Angle', 'Ball Speed'],
+          per_club: {club: {user: {...}, pga: {...}, scores: {...}, shot_count}},
+          user: {values: [...], raw: {...}},
+          pga:  {values: [...], raw: {...}},
+          clubs_used: [...]
+        }
     """
+    from services.club_matrix import CLUB_ORDER
 
     # PGA Tour averages by club (published reference data)
     PGA_AVERAGES = {
-        '1W': {'carry': 275, 'smash_factor': 1.49, 'spin_rate': 2686, 'launch_angle': 10.9, 'ball_speed': 171, 'dispersion': 25},
-        '3W': {'carry': 243, 'smash_factor': 1.47, 'spin_rate': 3655, 'launch_angle': 9.2, 'ball_speed': 158, 'dispersion': 20},
-        '2H': {'carry': 227, 'smash_factor': 1.44, 'spin_rate': 4437, 'launch_angle': 10.2, 'ball_speed': 152, 'dispersion': 18},
-        '3H': {'carry': 220, 'smash_factor': 1.43, 'spin_rate': 4630, 'launch_angle': 10.5, 'ball_speed': 148, 'dispersion': 17},
-        '4i': {'carry': 210, 'smash_factor': 1.41, 'spin_rate': 4836, 'launch_angle': 11.0, 'ball_speed': 143, 'dispersion': 15},
-        '5i': {'carry': 200, 'smash_factor': 1.39, 'spin_rate': 5361, 'launch_angle': 12.1, 'ball_speed': 137, 'dispersion': 13},
-        '6i': {'carry': 189, 'smash_factor': 1.37, 'spin_rate': 6231, 'launch_angle': 14.1, 'ball_speed': 132, 'dispersion': 11},
-        '7i': {'carry': 172, 'smash_factor': 1.33, 'spin_rate': 7097, 'launch_angle': 16.3, 'ball_speed': 120, 'dispersion': 8},
-        '8i': {'carry': 160, 'smash_factor': 1.31, 'spin_rate': 7998, 'launch_angle': 18.1, 'ball_speed': 115, 'dispersion': 7},
-        '9i': {'carry': 148, 'smash_factor': 1.29, 'spin_rate': 8647, 'launch_angle': 20.4, 'ball_speed': 109, 'dispersion': 6},
-        'PW': {'carry': 136, 'smash_factor': 1.27, 'spin_rate': 9316, 'launch_angle': 24.2, 'ball_speed': 102, 'dispersion': 5},
-        'AW': {'carry': 118, 'smash_factor': 1.25, 'spin_rate': 9900, 'launch_angle': 25.0, 'ball_speed': 93, 'dispersion': 6},
-        'SW': {'carry': 97, 'smash_factor': 1.22, 'spin_rate': 10200, 'launch_angle': 27.5, 'ball_speed': 82, 'dispersion': 7},
-        'LW': {'carry': 82, 'smash_factor': 1.19, 'spin_rate': 10400, 'launch_angle': 30.0, 'ball_speed': 72, 'dispersion': 8},
+        '1W': {'carry': 275, 'spin_rate': 2686, 'launch_angle': 10.9, 'ball_speed': 171, 'dispersion': 25},
+        '3W': {'carry': 243, 'spin_rate': 3655, 'launch_angle': 9.2, 'ball_speed': 158, 'dispersion': 20},
+        '2H': {'carry': 227, 'spin_rate': 4437, 'launch_angle': 10.2, 'ball_speed': 152, 'dispersion': 18},
+        '3H': {'carry': 220, 'spin_rate': 4630, 'launch_angle': 10.5, 'ball_speed': 148, 'dispersion': 17},
+        '4i': {'carry': 210, 'spin_rate': 4836, 'launch_angle': 11.0, 'ball_speed': 143, 'dispersion': 15},
+        '5i': {'carry': 200, 'spin_rate': 5361, 'launch_angle': 12.1, 'ball_speed': 137, 'dispersion': 13},
+        '6i': {'carry': 189, 'spin_rate': 6231, 'launch_angle': 14.1, 'ball_speed': 132, 'dispersion': 11},
+        '7i': {'carry': 172, 'spin_rate': 7097, 'launch_angle': 16.3, 'ball_speed': 120, 'dispersion': 8},
+        '8i': {'carry': 160, 'spin_rate': 7998, 'launch_angle': 18.1, 'ball_speed': 115, 'dispersion': 7},
+        '9i': {'carry': 148, 'spin_rate': 8647, 'launch_angle': 20.4, 'ball_speed': 109, 'dispersion': 6},
+        'PW': {'carry': 136, 'spin_rate': 9316, 'launch_angle': 24.2, 'ball_speed': 102, 'dispersion': 5},
+        'AW': {'carry': 118, 'spin_rate': 9900, 'launch_angle': 25.0, 'ball_speed': 93, 'dispersion': 6},
+        'SW': {'carry': 97, 'spin_rate': 10200, 'launch_angle': 27.5, 'ball_speed': 82, 'dispersion': 7},
+        'LW': {'carry': 82, 'spin_rate': 10400, 'launch_angle': 30.0, 'ball_speed': 72, 'dispersion': 8},
     }
-    DEFAULT_PGA = {'carry': 172, 'smash_factor': 1.33, 'spin_rate': 7097, 'launch_angle': 16.3, 'ball_speed': 120, 'dispersion': 8}
+    DEFAULT_PGA = {'carry': 172, 'spin_rate': 7097, 'launch_angle': 16.3, 'ball_speed': 120, 'dispersion': 8}
 
     shots = get_shots_query(
         session_id=session_id, club_short=club_short,
@@ -603,27 +643,26 @@ def radar_comparison(session_id=None, club_short=None, date_from=None, percentil
     if not by_club:
         return {}
 
-    # Collect per-club scores and raw values, then average across clubs
     metric_keys = ['carry', 'dispersion', 'spin_rate', 'launch_angle', 'ball_speed']
     axis_labels = {'carry': 'Carry', 'dispersion': 'Dispersion',
                    'spin_rate': 'Spin Rate', 'launch_angle': 'Launch Angle',
                    'ball_speed': 'Ball Speed'}
-    # higher_is_better flags per metric
     higher_better = {'carry': True, 'dispersion': False,
                      'spin_rate': False, 'launch_angle': True, 'ball_speed': True}
 
-    per_club_scores = {k: [] for k in metric_keys}
-    per_club_raw = {k: [] for k in metric_keys}
-    per_club_pga = {k: [] for k in metric_keys}
-
-    def normalize(user_val, pga_val, higher_is_better=True):
+    def normalize(user_val, pga_val, hib=True):
         if user_val is None or pga_val is None or pga_val == 0:
             return None
         ratio = user_val / pga_val
         score = ratio * 100
-        if not higher_is_better:
+        if not hib:
             score = (2 - ratio) * 100 if ratio <= 2 else 0
         return round(min(max(score, 0), 150), 1)
+
+    per_club = {}
+    agg_scores = {k: [] for k in metric_keys}
+    agg_user_raw = {k: [] for k in metric_keys}
+    agg_pga_raw = {k: [] for k in metric_keys}
 
     for club_name, club_shots in by_club.items():
         carries = [s.carry for s in club_shots if s.carry is not None]
@@ -637,27 +676,41 @@ def radar_comparison(session_id=None, club_short=None, date_from=None, percentil
 
         pga = PGA_AVERAGES.get(club_name, DEFAULT_PGA)
 
-        # Use percentile for carry and speed; median for angle/spin/dispersion
-        user_carry = float(np.percentile(carries, percentile)) if carries else None
-        user_dispersion = float(np.percentile(offlines, 50)) if offlines else None
-        user_spin = float(np.percentile(spins, 50)) if spins else None
-        user_launch = float(np.percentile(launches, 50)) if launches else None
-        user_speed = float(np.percentile(speeds, percentile)) if speeds else None
+        user_vals = {
+            'carry': round(float(np.percentile(carries, percentile)), 1) if carries else None,
+            'dispersion': round(float(np.percentile(offlines, 50)), 1) if offlines else None,
+            'spin_rate': round(float(np.median(spins)), 1) if spins else None,
+            'launch_angle': round(float(np.median(launches)), 1) if launches else None,
+            'ball_speed': round(float(np.percentile(speeds, percentile)), 1) if speeds else None,
+        }
 
-        vals = {'carry': user_carry, 'dispersion': user_dispersion,
-                'spin_rate': user_spin, 'launch_angle': user_launch,
-                'ball_speed': user_speed}
-
+        scores = {}
         for k in metric_keys:
-            score = normalize(vals[k], pga[k], higher_better[k])
-            if score is not None:
-                per_club_scores[k].append(score)
-            if vals[k] is not None:
-                per_club_raw[k].append(vals[k])
-            per_club_pga[k].append(pga[k])
+            scores[k] = normalize(user_vals[k], pga[k], higher_better[k])
+            if scores[k] is not None:
+                agg_scores[k].append(scores[k])
+            if user_vals[k] is not None:
+                agg_user_raw[k].append(user_vals[k])
+            agg_pga_raw[k].append(pga[k])
 
-    # Build aggregated axes, user values, and PGA values
-    axes = []
+        per_club[club_name] = {
+            'user': user_vals,
+            'pga': {k: pga[k] for k in metric_keys},
+            'scores': scores,
+            'shot_count': len(club_shots),
+        }
+
+    # Sort per_club by CLUB_ORDER
+    ordered_per_club = {}
+    for c in CLUB_ORDER:
+        if c in per_club:
+            ordered_per_club[c] = per_club[c]
+    for c in per_club:
+        if c not in ordered_per_club:
+            ordered_per_club[c] = per_club[c]
+
+    # Build aggregated summary
+    axes = [axis_labels[k] for k in metric_keys]
     user_values = []
     user_raw = {}
     pga_values = []
@@ -665,32 +718,17 @@ def radar_comparison(session_id=None, club_short=None, date_from=None, percentil
 
     for k in metric_keys:
         label = axis_labels[k]
-        axes.append(label)
-
-        if per_club_scores[k]:
-            avg_score = round(float(np.mean(per_club_scores[k])), 1)
-            user_values.append(avg_score)
-        else:
-            user_values.append(None)
-
-        if per_club_raw[k]:
-            avg_raw = round(float(np.mean(per_club_raw[k])), 1)
-            user_raw[label] = avg_raw
-        else:
-            user_raw[label] = None
-
-        if per_club_pga[k]:
-            pga_values.append(100)  # PGA is always the 100 reference
-            pga_raw[label] = round(float(np.mean(per_club_pga[k])), 1)
-        else:
-            pga_values.append(100)
-            pga_raw[label] = None
+        user_values.append(round(float(np.mean(agg_scores[k])), 1) if agg_scores[k] else None)
+        user_raw[label] = round(float(np.mean(agg_user_raw[k])), 1) if agg_user_raw[k] else None
+        pga_values.append(100)
+        pga_raw[label] = round(float(np.mean(agg_pga_raw[k])), 1) if agg_pga_raw[k] else None
 
     return {
         'axes': axes,
+        'per_club': ordered_per_club,
         'user': {'values': user_values, 'raw': user_raw},
         'pga': {'values': pga_values, 'raw': pga_raw},
-        'clubs_used': list(by_club.keys()),
+        'clubs_used': list(ordered_per_club.keys()),
     }
 
 

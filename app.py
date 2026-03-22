@@ -1,10 +1,13 @@
 import json
 import os
+import numpy as np
 from datetime import date, datetime, timedelta
 from flask import (
     Flask, render_template, request, redirect, url_for,
     flash, jsonify, send_from_directory
 )
+
+VERSION = '0.5.0'
 from config import Config
 from models.database import db, Session, Shot, ClubLoft, init_db
 from models.seed import seed_club_lofts
@@ -589,7 +592,6 @@ def register_routes(app):
         elif chart_type == 'shot-shape':
             return jsonify(shot_shape_data(session_id=session_id, club_short=clubs, date_from=date_from))
         elif chart_type == 'carry-distribution':
-            # Frontend expects dict keyed by club: {club: {values, min, q1, median, q3, max, count}}
             raw = carry_distribution(session_id=session_id, club_short=clubs, date_from=date_from, percentile=percentile)
             # Sort by CLUB_ORDER for consistent display
             ordered = {}
@@ -601,17 +603,64 @@ def register_routes(app):
                     ordered[c] = raw[c]
             return jsonify(ordered)
         elif chart_type == 'club-comparison':
-            stats = per_club_statistics(session_id=session_id, percentile=percentile, date_from=date_from, clubs=clubs)
+            # Box-and-whisker data with wedge sub-swing breakdown
+            # Returns a list of dicts with both old fields and box plot stats
+            all_shots = get_shots_query(
+                session_id=session_id, club_short=clubs,
+                excluded=False, date_from=date_from,
+            ).all()
+
+            # Detect which wedge clubs have multiple swing types
+            wedge_swing_types = {}
+            for s in all_shots:
+                if s.club_short in WEDGE_CLUBS:
+                    wedge_swing_types.setdefault(s.club_short, set()).add(s.swing_size)
+
+            # Group: wedge with multiple swings → club+swing_size, else just club
+            by_group = {}
+            for s in all_shots:
+                if s.club_short in WEDGE_CLUBS and len(wedge_swing_types.get(s.club_short, set())) > 1:
+                    label = f'{s.club_short}-{s.swing_size}'
+                else:
+                    label = s.club_short
+                by_group.setdefault(label, []).append(s)
+
+            from services.analytics import _box_plot_stats
+            entries = {}
+            for label, group_shots in by_group.items():
+                carries = [s.carry for s in group_shots if s.carry is not None]
+                totals = [s.total for s in group_shots if s.total is not None]
+                if len(carries) < 2:
+                    continue
+                box = _box_plot_stats(carries)
+                entry = {
+                    'club': label,
+                    # Backward-compat fields
+                    'carry_p75': round(float(np.percentile(carries, percentile)), 1) if carries else None,
+                    'total_p75': round(float(np.percentile(totals, percentile)), 1) if totals else None,
+                    'max_total': round(float(max(totals)), 1) if totals else None,
+                    'shot_count': len(group_shots),
+                }
+                entry.update(box)
+                entries[label] = entry
+
+            # Sort: non-wedge in CLUB_ORDER, wedge sub-swings grouped
             result = []
             for c in CLUB_ORDER:
-                if c in stats:
-                    result.append({
-                        'club': c,
-                        'carry_p75': stats[c]['carry_pct'],
-                        'total_p75': stats[c]['total_pct'],
-                        'max_total': stats[c]['max_total'],
-                        'shot_count': stats[c]['shot_count'],
-                    })
+                if c in WEDGE_CLUBS and len(wedge_swing_types.get(c, set())) > 1:
+                    for sw in SWING_SIZES:
+                        key = f'{c}-{sw}'
+                        if key in entries:
+                            result.append(entries.pop(key))
+                    for key in list(entries.keys()):
+                        if key.startswith(f'{c}-'):
+                            result.append(entries.pop(key))
+                else:
+                    if c in entries:
+                        result.append(entries.pop(c))
+            # Any remaining
+            for key in entries:
+                result.append(entries[key])
             return jsonify(result)
         elif chart_type == 'loft-analysis':
             return jsonify(analyze_loft(session_id=session_id, club_short=clubs, date_from=date_from))
