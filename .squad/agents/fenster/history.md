@@ -150,3 +150,13 @@ Cross-agent coordination:
 - McManus updated 4 templates (wedge_matrix, print_card, import, analytics) to reflect new UI
 - Hockney added 28 tests validating all three features + DB migration
 - All tests pass; 3 pre-existing loft analysis failures remain (not caused by batch 5)
+
+### 2026-03-22 — TODO 65: P90 Dispersion Boundary Computation
+- **New function:** `compute_dispersion_boundary()` in `services/analytics.py`. Computes smoothed convex hull boundary per club for the P-percentile dispersion area.
+- **Algorithm:** For each club: filter shots to percentile range (symmetric around median, on both carry and offline axes), compute `scipy.spatial.ConvexHull`, sort hull vertices by angle from centroid, parameterize by cumulative chord length, smooth with `scipy.interpolate.CubicSpline` (periodic), sample 60 points, close the loop.
+- **Edge cases:** Skips clubs with <3 shots, detects collinearity via SVD (smallest singular value ≈ 0), catches ConvexHull exceptions gracefully.
+- **API response change:** `/api/analytics/dispersion` response changed from flat array `[{carry, offline, club}]` to envelope `{shots: [...], dispersion_boundary: {club: [{carry, offline}]}}`. Frontend already handled this format (McManus pre-built the boundary rendering).
+- **Dependencies:** Added `scipy>=1.12` to `requirements.txt`. Imports `ConvexHull` and `CubicSpline` at top of analytics.py.
+- **Percentile semantics:** The `percentile` param (e.g., 75) defines the range as the middle 75% of both carry and offline values. `low_pct = (100 - percentile) / 2`, `high_pct = 100 - low_pct`. So P75 keeps shots between P12.5 and P87.5 on each axis.
+- **Test updates:** Updated 4 dispersion tests in `test_chart_endpoints.py` to expect the new envelope format. Single-shot test verifies empty boundary. All 153 tests pass (3 pre-existing loft failures unchanged).
+- **Key contract — dispersion API:** Response: `{shots: [{carry, offline, club, club_short}], dispersion_boundary: {club_name: [{carry, offline}]}}`. Boundary is a closed loop (last point == first point). Empty dict `{}` when no boundaries computable.

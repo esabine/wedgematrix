@@ -122,15 +122,15 @@ def _seed_multi_club_shots(session):
 def _seed_wedge_shots(session):
     """Seed wedge shots across AW/SW/LW with varying swing sizes."""
     entries = [
-        ('G-Wedge', 'AW', '4/4', 90.0),
-        ('G-Wedge', 'AW', '4/4', 88.0),
-        ('G-Wedge', 'AW', '3/4', 72.0),
-        ('G-Wedge', 'AW', '3/4', 70.0),
-        ('S-Wedge', 'SW', '4/4', 80.0),
-        ('S-Wedge', 'SW', '4/4', 78.0),
-        ('S-Wedge', 'SW', '3/4', 62.0),
-        ('L-Wedge', 'LW', '4/4', 70.0),
-        ('L-Wedge', 'LW', '4/4', 68.0),
+        ('G-Wedge', 'AW', '3/3', 90.0),
+        ('G-Wedge', 'AW', '3/3', 88.0),
+        ('G-Wedge', 'AW', '2/3', 72.0),
+        ('G-Wedge', 'AW', '2/3', 70.0),
+        ('S-Wedge', 'SW', '3/3', 80.0),
+        ('S-Wedge', 'SW', '3/3', 78.0),
+        ('S-Wedge', 'SW', '2/3', 62.0),
+        ('L-Wedge', 'LW', '3/3', 70.0),
+        ('L-Wedge', 'LW', '3/3', 68.0),
     ]
     for i, (club, short, swing, carry) in enumerate(entries):
         _db.session.add(_make_shot(
@@ -205,10 +205,14 @@ class TestChartEndpointsReturnData:
         resp = api.get(f'/api/analytics/dispersion?session_id={session.id}')
         assert resp.status_code == 200
         data = resp.get_json()
-        assert isinstance(data, list)
-        assert len(data) > 0
-        assert 'carry' in data[0]
-        assert 'offline' in data[0]
+        assert isinstance(data, dict)
+        assert 'shots' in data
+        assert 'dispersion_boundary' in data
+        shots = data['shots']
+        assert isinstance(shots, list)
+        assert len(shots) > 0
+        assert 'carry' in shots[0]
+        assert 'offline' in shots[0]
 
     def test_spin_carry_returns_data(self, api, routed_app, ctx):
         session = _seed_session()
@@ -368,7 +372,8 @@ class TestEdgeCases:
         resp = api.get(f'/api/analytics/dispersion?session_id={session.id}')
         assert resp.status_code == 200
         data = resp.get_json()
-        assert data == []
+        assert data['shots'] == []
+        assert data['dispersion_boundary'] == {}
 
     def test_radar_no_shots_returns_empty(self, api, routed_app, ctx):
         session = _seed_session()
@@ -416,9 +421,12 @@ class TestEdgeCases:
         resp = api.get(f'/api/analytics/dispersion?session_id={session.id}')
         assert resp.status_code == 200
         data = resp.get_json()
-        assert len(data) == 1
-        assert data[0]['carry'] == pytest.approx(160.0)
-        assert data[0]['offline'] == pytest.approx(3.5)
+        shots = data['shots']
+        assert len(shots) == 1
+        assert shots[0]['carry'] == pytest.approx(160.0)
+        assert shots[0]['offline'] == pytest.approx(3.5)
+        # Single shot = no boundary (need >= 3)
+        assert data['dispersion_boundary'] == {}
 
     def test_launch_spin_needs_3_shots_minimum(self, api, routed_app, ctx):
         """Launch-spin stability requires >= 3 shots per club to render."""
@@ -478,7 +486,8 @@ class TestEdgeCases:
         resp = api.get(f'/api/analytics/dispersion?session_id={session.id}&club=7i,1W')
         assert resp.status_code == 200
         data = resp.get_json()
-        clubs_in_response = {d['club_short'] for d in data}
+        shots = data['shots']
+        clubs_in_response = {d['club_short'] for d in shots}
         assert '7i' in clubs_in_response
         assert '1W' in clubs_in_response
 

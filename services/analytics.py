@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.spatial import ConvexHull
+from scipy.interpolate import CubicSpline
 from models.database import db, Session, Shot, ClubLoft
 
 
@@ -591,3 +593,116 @@ def radar_comparison(session_id=None, club_short=None, date_from=None, percentil
         'user': {'values': user_values, 'raw': user_raw},
         'pga': {'values': pga_values, 'raw': pga_raw},
     }
+
+
+def compute_dispersion_boundary(session_id=None, club_short=None, date_from=None,
+                                percentile=75, num_smooth_points=60):
+    """Compute a smoothed convex hull boundary for P-percentile dispersion per club.
+
+    For each club, filters shots to those within the P-percentile range of carry
+    distance, then computes a convex hull of (carry, offline) and smooths it with
+    cubic spline interpolation.
+
+    Returns dict keyed by club_short: list of {carry, offline} boundary points.
+    Clubs with fewer than 3 valid shots or collinear points are omitted.
+    """
+    shots = get_shots_query(
+        session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
+    ).all()
+
+    # Group shots by club
+    by_club = {}
+    for s in shots:
+        if s.carry is not None and s.offline is not None:
+            by_club.setdefault(s.club_short, []).append((s.carry, s.offline))
+
+    boundaries = {}
+    for club, points in by_club.items():
+        carries = [p[0] for p in points]
+        if len(carries) < 3:
+            continue
+
+        # Filter to shots within the percentile range (symmetric around median)
+        low_pct = (100 - percentile) / 2
+        high_pct = 100 - low_pct
+        carry_low = float(np.percentile(carries, low_pct))
+        carry_high = float(np.percentile(carries, high_pct))
+
+        filtered = [(c, o) for c, o in points if carry_low <= c <= carry_high]
+        if len(filtered) < 3:
+            continue
+
+        # Also filter offline to percentile range
+        offlines = [p[1] for p in filtered]
+        off_low = float(np.percentile(offlines, low_pct))
+        off_high = float(np.percentile(offlines, high_pct))
+        filtered = [(c, o) for c, o in filtered if off_low <= o <= off_high]
+        if len(filtered) < 3:
+            continue
+
+        pts = np.array(filtered)
+
+        # Check for collinearity: if all points lie on a line, skip
+        if pts.shape[0] >= 3:
+            centered = pts - pts.mean(axis=0)
+            # Singular value decomposition — if smallest SV ≈ 0, points are collinear
+            _, sv, _ = np.linalg.svd(centered, full_matrices=False)
+            if sv[-1] < 1e-10:
+                continue
+
+        try:
+            hull = ConvexHull(pts)
+        except Exception:
+            continue
+
+        # Extract hull vertices in order and close the loop
+        hull_indices = list(hull.vertices)
+        hull_pts = pts[hull_indices]
+
+        # Sort hull points by angle from centroid for proper polygon ordering
+        centroid = hull_pts.mean(axis=0)
+        angles = np.arctan2(hull_pts[:, 1] - centroid[1],
+                            hull_pts[:, 0] - centroid[0])
+        order = np.argsort(angles)
+        hull_pts = hull_pts[order]
+
+        # Close the loop
+        hull_closed = np.vstack([hull_pts, hull_pts[0:1]])
+
+        if len(hull_pts) < 3:
+            # Not enough unique hull vertices for spline smoothing
+            boundary = [
+                {'carry': round(float(p[0]), 1), 'offline': round(float(p[1]), 1)}
+                for p in hull_closed
+            ]
+            boundaries[club] = boundary
+            continue
+
+        # Parameterize by cumulative chord length
+        diffs = np.diff(hull_closed, axis=0)
+        seg_lengths = np.sqrt((diffs ** 2).sum(axis=1))
+        t = np.zeros(len(hull_closed))
+        t[1:] = np.cumsum(seg_lengths)
+        t_max = t[-1]
+        if t_max < 1e-10:
+            continue
+
+        # Cubic spline (periodic) on carry and offline separately
+        cs_carry = CubicSpline(t, hull_closed[:, 0], bc_type='periodic')
+        cs_offline = CubicSpline(t, hull_closed[:, 1], bc_type='periodic')
+
+        t_smooth = np.linspace(0, t_max, num_smooth_points, endpoint=False)
+        smooth_carry = cs_carry(t_smooth)
+        smooth_offline = cs_offline(t_smooth)
+
+        # Close the smoothed loop
+        boundary = [
+            {'carry': round(float(smooth_carry[i]), 1),
+             'offline': round(float(smooth_offline[i]), 1)}
+            for i in range(len(t_smooth))
+        ]
+        # Close the loop by appending the first point
+        boundary.append(boundary[0].copy())
+        boundaries[club] = boundary
+
+    return boundaries

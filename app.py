@@ -14,6 +14,7 @@ from services.analytics import (
     dispersion_data, spin_vs_carry_data, shot_shape_data,
     carry_distribution, get_shots_query, detect_outliers,
     launch_spin_stability, radar_comparison,
+    compute_dispersion_boundary,
 )
 from services.club_matrix import build_club_matrix, CLUB_ORDER
 from services.wedge_matrix import build_wedge_matrix, SWING_SIZES, WEDGE_CLUBS
@@ -577,7 +578,12 @@ def register_routes(app):
         clubs = [c.strip() for c in club_raw.split(',') if c.strip()] if club_raw else None
 
         if chart_type == 'dispersion':
-            return jsonify(dispersion_data(session_id=session_id, club_short=clubs, date_from=date_from))
+            shots = dispersion_data(session_id=session_id, club_short=clubs, date_from=date_from)
+            boundary = compute_dispersion_boundary(
+                session_id=session_id, club_short=clubs,
+                date_from=date_from, percentile=percentile,
+            )
+            return jsonify({'shots': shots, 'dispersion_boundary': boundary})
         elif chart_type == 'spin-carry':
             return jsonify(spin_vs_carry_data(session_id=session_id, club_short=clubs, date_from=date_from))
         elif chart_type == 'shot-shape':
