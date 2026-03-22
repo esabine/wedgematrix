@@ -106,3 +106,11 @@
 - **PDF in gitignore (TODO line 44):** `*.pdf` already in `.gitignore` (line 19). `git ls-files "*.pdf"` returns empty. No tracked PDFs.
 - **Club sort order (TODO line 52):** `CLUB_ORDER = ['1W', '3W', '2H', '3H', '4i', '5i', '6i', '7i', '8i', '9i', 'PW', 'AW', 'SW', 'LW']`. Woods, Hybrids, Irons, Wedges (PW/AW/SW/LW). All dict-keyed APIs sort by this order.
 - **Test suite:** 105 passed, 3 failed (pre-existing loft analysis test failures, unchanged).
+
+### 2026-03-22 — Database Deduplication
+- **Problem:** 11 sessions in DB, only 4 legitimate. 7 were duplicates from repeated test imports (same CSV re-imported, `test.csv` renames, partial wedge batch imports).
+- **Exclusion safety:** The `shots.excluded` boolean column stores user exclusion flags. All 11 excluded shots were in sessions 1, 2, and 5 — none in duplicates. No merge needed.
+- **Deleted:** Sessions 7, 8, 9, 10, 11, 12, 13 (266 shots). Kept sessions 1, 2, 5, 6 (469 shots).
+- **Backup:** `golf_analytics.db.bak` created before any changes.
+- **Duplicate detection method:** Same filename + same session_date = duplicate. Also caught `test.csv` as a renamed copy by comparing shot data (identical carry/speed/spin values). Partial batch imports (5 shots vs 100) identified by shot count disparity.
+- **Surviving state:** 4 sessions, 469 shots, 11 exclusions intact (8 in clevelands-03-12, 1 in esabine-03-08, 2 in esabine-03-17).

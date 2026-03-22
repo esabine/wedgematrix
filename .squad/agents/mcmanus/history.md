@@ -178,3 +178,17 @@
 **Batch import UX verified:** Group select ("First N"), configurable group size, swing size dropdown, Tag & Import one-click flow, remaining count badge, "All done" section — all working as designed. No changes needed.
 
 **Import form hardened:** Changed hidden form fields (`session_info`, `shots_data`) from inline `value='{{ tojson }}'` to JS-populated values via `JSON.stringify()`. The old single-quoted attributes could theoretically break with filenames containing apostrophes. New approach: empty `value=""` inputs + inline `<script>` block that sets `.value = JSON.stringify({{ tojson }})`. Tested both club save (form POST) and wedge batch (fetch API) paths — both work correctly.
+
+### 2026-03-23 — TODOs 61, 62, 63: Test Data Toggle, Swing Size Labels, PW Column
+
+**Test-data session toggle (TODO 61):** Added per-session toggle button (flask icon) in the Actions column. AJAX POST to `/api/sessions/<id>/toggle-test`. Test sessions get a yellow "Test" badge next to the date and an amber-highlighted row (`.test-data-row` class). A "Show Test Data" form-switch with badge count in the header controls visibility via `include_test` URL param. Hidden by default. Template expects `test_data_count`, `include_test`, and `session.is_test_data` from the backend route.
+
+**Swing size label changes (TODO 62):** Removed 4/4 row entirely. Renamed 3/4→3/3, 2/4→2/3, 1/4→1/3 in all four templates: `wedge_matrix.html`, `print_card.html`, `shots.html` (filter dropdown), `import.html` (tagging dropdown). Fraction explanation text and percentile example updated to reference new labels. Swing sizes list now 7 rows instead of 8.
+
+**PW column added to wedge matrix (TODO 63):** PW column inserted left of AW. Column order: PW, AW, SW, LW. Both `wedge_matrix.html` and `print_card.html` updated — club loop now iterates `['PW', 'AW', 'SW', 'LW']`. Empty-state colspan changed from 4 to 5. Print CSS: wedge card gets tighter padding/font (11pt headers, 12pt body, 1.5pt padding) to fit 5 columns at 2.91" width. On-screen: `#wedge-matrix-table .matrix-cell` min-width reduced from 60px to 44px.
+
+**Key patterns:**
+- Test-data toggle uses same AJAX-then-reload pattern as shot exclude toggles
+- Show/Hide test data switch uses same URL-param-driven pattern as "Show Hidden" shots toggle
+- Swing size labels are a data-contract change — backend must also recognize new labels (3/3, 2/3, 1/3)
+- PW column requires backend wedge_matrix service to include PW in its output dict
