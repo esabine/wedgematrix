@@ -16,7 +16,7 @@ from services.analytics import (
     launch_spin_stability, radar_comparison,
 )
 from services.club_matrix import build_club_matrix, CLUB_ORDER
-from services.wedge_matrix import build_wedge_matrix, SWING_SIZES
+from services.wedge_matrix import build_wedge_matrix, SWING_SIZES, WEDGE_CLUBS
 from services.loft_analysis import analyze_loft, loft_summary
 
 DATE_RANGE_DAYS = {'7': 7, '30': 30, '60': 60, '90': 90}
@@ -60,10 +60,10 @@ def register_routes(app):
 
     @app.route('/')
     def dashboard():
-        all_sessions = Session.query.order_by(Session.session_date.desc()).all()
-        total_shots = Shot.query.count()
-        clubs_tracked = db.session.query(Shot.club_short).distinct().count()
-        recent = Session.query.order_by(Session.imported_at.desc()).limit(5).all()
+        all_sessions = Session.query.filter(Session.is_test == False).order_by(Session.session_date.desc()).all()
+        total_shots = Shot.query.join(Session).filter(Session.is_test == False).count()
+        clubs_tracked = db.session.query(Shot.club_short).join(Session).filter(Session.is_test == False).distinct().count()
+        recent = Session.query.filter(Session.is_test == False).order_by(Session.imported_at.desc()).limit(5).all()
         return render_template('dashboard.html',
                                total_sessions=len(all_sessions),
                                total_shots=total_shots,
@@ -180,8 +180,12 @@ def register_routes(app):
 
     @app.route('/sessions')
     def sessions():
-        sessions = Session.query.order_by(Session.imported_at.desc()).all()
-        return render_template('sessions.html', sessions=sessions)
+        include_test = request.args.get('include_test', 'false').lower() == 'true'
+        q = Session.query
+        if not include_test:
+            q = q.filter(Session.is_test == False)
+        sessions = q.order_by(Session.imported_at.desc()).all()
+        return render_template('sessions.html', sessions=sessions, include_test=include_test)
 
     @app.route('/sessions/<int:session_id>')
     def session_detail(session_id):
@@ -205,12 +209,20 @@ def register_routes(app):
         flash('Session deleted.', 'success')
         return redirect(url_for('sessions'))
 
+    @app.route('/api/sessions/<int:session_id>/toggle-test', methods=['POST'])
+    def toggle_test(session_id):
+        session = Session.query.get_or_404(session_id)
+        session.is_test = not session.is_test
+        db.session.commit()
+        return jsonify({'success': True, 'id': session.id, 'is_test': session.is_test})
+
     @app.route('/club-matrix')
     def club_matrix():
         session_id = request.args.get('session_id', type=int)
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
+        include_test = request.args.get('include_test', 'false').lower() == 'true'
         all_sessions = Session.query.order_by(Session.session_date.desc()).all()
-        matrix = build_club_matrix(session_id=session_id, percentile=percentile)
+        matrix = build_club_matrix(session_id=session_id, percentile=percentile, include_test=include_test)
         return render_template('club_matrix.html',
                                matrix=matrix,
                                sessions=all_sessions,
@@ -221,8 +233,9 @@ def register_routes(app):
     def wedge_matrix():
         session_id = request.args.get('session_id', type=int)
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
+        include_test = request.args.get('include_test', 'false').lower() == 'true'
         all_sessions = Session.query.order_by(Session.session_date.desc()).all()
-        data = build_wedge_matrix(session_id=session_id, percentile=percentile)
+        data = build_wedge_matrix(session_id=session_id, percentile=percentile, include_test=include_test)
         return render_template('wedge_matrix.html',
                                matrix=data['matrix'],
                                sessions=all_sessions,
@@ -236,6 +249,7 @@ def register_routes(app):
         swing_size = request.args.get('swing_size')
         date_range = request.args.get('date_range', '')
         include_hidden = request.args.get('include_hidden', 'false').lower() == 'true'
+        include_test = request.args.get('include_test', 'false').lower() == 'true'
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 50, type=int)
         per_page = min(per_page, 200)  # cap at 200
@@ -243,11 +257,19 @@ def register_routes(app):
         date_from = parse_date_range(date_range)
 
         q = Shot.query
-        if date_from is not None:
-            q = q.join(Session).filter(Session.session_date >= date_from)
-        elif session_id:
+        needs_session_join = False
+
+        if date_from is not None or (not include_test and not session_id):
+            needs_session_join = True
+            q = q.join(Session)
+            if date_from is not None:
+                q = q.filter(Session.session_date >= date_from)
+            if not include_test and not session_id:
+                q = q.filter(Session.is_test == False)
+
+        if session_id:
             q = q.filter(Shot.session_id == session_id)
-        if session_id and date_from is not None:
+        if needs_session_join and session_id and date_from is not None:
             q = q.filter(Shot.session_id == session_id)
 
         # Parse comma-separated club filter
@@ -303,8 +325,8 @@ def register_routes(app):
         date_range = request.args.get('date_range', '')
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
         sessions = Session.query.order_by(Session.session_date.desc()).all()
-        has_data = Shot.query.filter(Shot.excluded == False).count() > 0
-        clubs = [r[0] for r in db.session.query(Shot.club_short).distinct().order_by(Shot.club_short).all()]
+        has_data = Shot.query.join(Session).filter(Shot.excluded == False, Session.is_test == False).count() > 0
+        clubs = [r[0] for r in db.session.query(Shot.club_short).join(Session).filter(Session.is_test == False).distinct().order_by(Shot.club_short).all()]
         return render_template('analytics.html',
                                sessions=sessions,
                                current_session_id=session_id,
@@ -530,14 +552,16 @@ def register_routes(app):
     def api_club_matrix():
         session_id = request.args.get('session_id', type=int)
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
-        matrix = build_club_matrix(session_id=session_id, percentile=percentile)
+        include_test = request.args.get('include_test', 'false').lower() == 'true'
+        matrix = build_club_matrix(session_id=session_id, percentile=percentile, include_test=include_test)
         return jsonify({'percentile': percentile, 'session_id': session_id, 'matrix': matrix})
 
     @app.route('/api/wedge-matrix')
     def api_wedge_matrix():
         session_id = request.args.get('session_id', type=int)
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
-        data = build_wedge_matrix(session_id=session_id, percentile=percentile)
+        include_test = request.args.get('include_test', 'false').lower() == 'true'
+        data = build_wedge_matrix(session_id=session_id, percentile=percentile, include_test=include_test)
         return jsonify({'percentile': percentile, 'session_id': session_id, **data})
 
     @app.route('/api/analytics/<chart_type>')
@@ -546,6 +570,7 @@ def register_routes(app):
         club_raw = request.args.get('club', '')
         date_range = request.args.get('date_range', '')
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
+        include_test = request.args.get('include_test', 'false').lower() == 'true'
         date_from = parse_date_range(date_range)
 
         # Parse comma-separated club list; None means "all clubs"
@@ -616,6 +641,7 @@ def register_routes(app):
             swing_size: optional swing size filter.
             date_range: optional date range (7/30/60/90).
             include_hidden: include excluded shots (default false).
+            include_test: include test sessions (default false).
             page: page number (default 1).
             per_page: results per page (default 50, max 200).
         """
@@ -624,13 +650,22 @@ def register_routes(app):
         swing_size = request.args.get('swing_size')
         date_range = request.args.get('date_range', '')
         include_hidden = request.args.get('include_hidden', 'false').lower() == 'true'
+        include_test = request.args.get('include_test', 'false').lower() == 'true'
         page = request.args.get('page', 1, type=int)
         per_page = min(request.args.get('per_page', 50, type=int), 200)
         date_from = parse_date_range(date_range)
 
         q = Shot.query
-        if date_from is not None:
-            q = q.join(Session).filter(Session.session_date >= date_from)
+        needs_session_join = False
+
+        if date_from is not None or (not include_test and not session_id):
+            needs_session_join = True
+            q = q.join(Session)
+            if date_from is not None:
+                q = q.filter(Session.session_date >= date_from)
+            if not include_test and not session_id:
+                q = q.filter(Session.is_test == False)
+
         if session_id:
             q = q.filter(Shot.session_id == session_id)
 
@@ -678,7 +713,11 @@ def register_routes(app):
 
     @app.route('/api/sessions')
     def api_sessions():
-        sessions = Session.query.order_by(Session.imported_at.desc()).all()
+        include_test = request.args.get('include_test', 'false').lower() == 'true'
+        q = Session.query
+        if not include_test:
+            q = q.filter(Session.is_test == False)
+        sessions = q.order_by(Session.imported_at.desc()).all()
         return jsonify([s.to_dict() for s in sessions])
 
     @app.route('/api/lofts', methods=['GET'])

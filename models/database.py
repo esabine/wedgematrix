@@ -14,6 +14,7 @@ class Session(db.Model):
     data_type = db.Column(db.Text, nullable=False)  # "club" or "wedge"
     imported_at = db.Column(db.DateTime, default=datetime.utcnow)
     notes = db.Column(db.Text, nullable=True)
+    is_test = db.Column(db.Boolean, default=False, nullable=False)
 
     shots = db.relationship('Shot', backref='session', cascade='all, delete-orphan', lazy='dynamic')
 
@@ -26,6 +27,7 @@ class Session(db.Model):
             'data_type': self.data_type,
             'imported_at': self.imported_at.isoformat() if self.imported_at else None,
             'notes': self.notes,
+            'is_test': self.is_test,
             'shot_count': self.shots.count(),
         }
 
@@ -112,3 +114,37 @@ def init_db(app):
     db.init_app(app)
     with app.app_context():
         db.create_all()
+        _migrate_add_is_test(app)
+        _migrate_rename_swing_sizes(app)
+
+
+def _migrate_add_is_test(app):
+    """Add is_test column to sessions table if it doesn't exist."""
+    import sqlite3
+    db_path = app.config.get('SQLALCHEMY_DATABASE_URI', '').replace('sqlite:///', '')
+    if not db_path:
+        return
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(sessions)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if 'is_test' not in columns:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN is_test BOOLEAN NOT NULL DEFAULT 0")
+        conn.commit()
+    conn.close()
+
+
+def _migrate_rename_swing_sizes(app):
+    """Rename fraction swing sizes: 3/4→3/3, 2/4→2/3, 1/4→1/3."""
+    import sqlite3
+    db_path = app.config.get('SQLALCHEMY_DATABASE_URI', '').replace('sqlite:///', '')
+    if not db_path:
+        return
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    renames = [('3/4', '3/3'), ('2/4', '2/3'), ('1/4', '1/3')]
+    for old, new in renames:
+        cursor.execute("UPDATE shots SET swing_size = ? WHERE swing_size = ?", (new, old))
+    if conn.total_changes > 0:
+        conn.commit()
+    conn.close()

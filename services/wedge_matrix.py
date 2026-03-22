@@ -1,31 +1,31 @@
 import numpy as np
-from models.database import db, Shot
+from models.database import db, Session, Shot
 from services.analytics import percentile_value
 
-# Swing sizes in display order
-SWING_SIZES = ['4/4', '3/4', '2/4', '1/4', '10:2', '10:3', '9:3', '8:4']
+# Swing sizes in display order (4/4 removed; fractions renamed x/3)
+SWING_SIZES = ['3/3', '2/3', '1/3', '10:2', '10:3', '9:3', '8:4']
 
 # Fraction sizes show Carry only; clock-hand sizes show Carry/Max
-FRACTION_SIZES = {'4/4', '3/4', '2/4', '1/4'}
+FRACTION_SIZES = {'3/3', '2/3', '1/3'}
 CLOCK_SIZES = {'10:2', '10:3', '9:3', '8:4'}
 
-# Wedge matrix clubs — AW, SW, LW only (NOT PW)
-WEDGE_CLUBS = ['AW', 'SW', 'LW']
+# Wedge matrix clubs — PW first, then AW, SW, LW
+WEDGE_CLUBS = ['PW', 'AW', 'SW', 'LW']
 
 
-def build_wedge_matrix(session_id=None, percentile=75):
-    """Build the wedge matrix: Swing Size × AW/SW/LW.
+def build_wedge_matrix(session_id=None, percentile=75, include_test=False):
+    """Build the wedge matrix: Swing Size × PW/AW/SW/LW.
 
-    Fraction sizes (4/4, 3/4, 2/4, 1/4): cell = {'carry': N}
+    Fraction sizes (3/3, 2/3, 1/3): cell = {'carry': N}
     Clock sizes (10:2, 10:3, 9:3, 8:4): cell = {'carry': N, 'max': M}
     Empty cell = None
 
     Returns:
         {
-            'swing_sizes': ['4/4', ...],
-            'clubs': ['AW', 'SW', 'LW'],
+            'swing_sizes': ['3/3', ...],
+            'clubs': ['PW', 'AW', 'SW', 'LW'],
             'matrix': {
-                '4/4': {'AW': {'carry': 85}, 'SW': None, 'LW': {'carry': 42}},
+                '3/3': {'PW': {'carry': 100}, 'AW': {'carry': 85}, ...},
                 ...
             }
         }
@@ -37,13 +37,17 @@ def build_wedge_matrix(session_id=None, percentile=75):
     )
     if session_id is not None:
         q = q.filter(Shot.session_id == session_id)
+    elif not include_test:
+        q = q.join(Session).filter(Session.is_test == False)
 
     shots = q.all()
 
-    # Group by (swing_size, club_short)
+    # Group by (swing_size, club_short), mapping old fraction names to new
+    SWING_RENAME = {'3/4': '3/3', '2/4': '2/3', '1/4': '1/3'}
     grouped = {}
     for s in shots:
-        key = (s.swing_size, s.club_short)
+        size = SWING_RENAME.get(s.swing_size, s.swing_size)
+        key = (size, s.club_short)
         grouped.setdefault(key, []).append(s)
 
     matrix = {}
@@ -77,6 +81,6 @@ def build_wedge_matrix(session_id=None, percentile=75):
 
 
 # Alias that returns just the matrix dict (keyed by swing_size) for simpler access
-def generate_wedge_matrix(session_id=None, percentile=75):
-    result = build_wedge_matrix(session_id=session_id, percentile=percentile)
+def generate_wedge_matrix(session_id=None, percentile=75, include_test=False):
+    result = build_wedge_matrix(session_id=session_id, percentile=percentile, include_test=include_test)
     return result['matrix']

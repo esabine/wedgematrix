@@ -28,16 +28,27 @@ def compute_percentile_for_club(session_id, club_short, percentile):
     return percentile_value(carries, percentile)
 
 
-def get_shots_query(session_id=None, club_short=None, swing_size=None, excluded=False, date_from=None):
+def get_shots_query(session_id=None, club_short=None, swing_size=None, excluded=False, date_from=None, include_test=False):
     """Build a base shot query with common filters.
 
     By default excludes excluded shots unless excluded=None (return all).
     date_from: if set, only include shots from sessions on or after this date.
     club_short: single string or list of club names.
+    include_test: when False and session_id is None, exclude shots from test sessions.
     """
     q = Shot.query
-    if date_from is not None:
-        q = q.join(Session).filter(Session.session_date >= date_from)
+    needs_session_join = False
+
+    if date_from is not None or (not include_test and session_id is None):
+        needs_session_join = True
+
+    if needs_session_join:
+        q = q.join(Session)
+        if date_from is not None:
+            q = q.filter(Session.session_date >= date_from)
+        if not include_test and session_id is None:
+            q = q.filter(Session.is_test == False)
+
     if session_id is not None:
         q = q.filter(Shot.session_id == session_id)
     if club_short is not None:

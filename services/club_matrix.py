@@ -1,25 +1,28 @@
 import numpy as np
-from models.database import db, Shot, ClubLoft
+from models.database import db, Session, Shot, ClubLoft
 from services.analytics import percentile_value
 
 # Club ordering by standard loft (ascending = Driver first → LW last)
 CLUB_ORDER = ['1W', '3W', '2H', '3H', '4i', '5i', '6i', '7i', '8i', '9i', 'PW', 'AW', 'SW', 'LW']
 
 
-def build_club_matrix(session_id=None, percentile=75):
+def build_club_matrix(session_id=None, percentile=75, include_test=False):
     """Build the club matrix: Club | Carry | Total | Max.
 
     Args:
         session_id: Filter to single session, or None for all sessions.
         percentile: Which percentile to use (default P75).
+        include_test: When False and session_id is None, exclude test sessions.
 
     Returns list of dicts ordered by standard loft (Driver → LW).
     Only includes clubs that have non-excluded shot data.
     """
-    # Build base query — only non-excluded shots with swing_size='full' or any swing_size
+    # Build base query — only non-excluded shots
     q = Shot.query.filter(Shot.excluded == False)
     if session_id is not None:
         q = q.filter(Shot.session_id == session_id)
+    elif not include_test:
+        q = q.join(Session).filter(Session.is_test == False)
 
     shots = q.all()
 
