@@ -180,3 +180,27 @@ Paired with Hockney's 27 correctness, edge case, integration, and regression tes
 - **No API shape change:** Response still {shots: [{carry, offline, club, club_short}], dispersion_boundary: {club: [{carry, offline}]}}. The carry key now holds the corrected forward distance. Frontend needs no changes.
 - **Practical impact:** For typical shots (offline 3-10 yards on a 150+ yard carry), the correction is small — usually <1 yard. It matters more for wild offline shots on shorter clubs.
 - **Test impact:** All 153 tests pass. No assertions broke because the correction is small relative to test data ranges (offlines ≤10 yards on carries ≥111 yards).
+
+### 2026-03-23 — TODO 67+68+70: Stability Metrics, PGA Averages, P90 Boundary
+
+**TODO 67 — Launch & Spin Stability:**
+- Added `_coefficient_of_variation()` helper (std/mean×100) to `services/analytics.py`.
+- `launch_spin_stability()` now returns per-club `stability` dict with `spin_std`, `spin_cv`, `launch_std`, `launch_cv` alongside existing box plot stats.
+- **High-variance cluster detection:** Compares each club's CV against median CV across all clubs. Clubs with CV > max(1.5× median, 3.0) are flagged with severity (moderate/high). Returned as `high_variance_clusters` array in the response.
+- Response shape: `{clubs: {...}, correlation: str, high_variance_clusters: [{club, metric, cv, std_dev, shot_count, severity, threshold_cv}]}`.
+- The `percentile` parameter is still accepted but unused in the function — stability metrics don't depend on percentile.
+
+**TODO 68 — PGA Tour Averages:**
+- Verified `PGA_AVERAGES` dict in `radar_comparison()` covers all 14 clubs (1W through LW) with carry, smash_factor, spin_rate, launch_angle, ball_speed, dispersion.
+- Wedge clubs (PW/AW/SW/LW) have complete, reasonable PGA Tour-level data.
+- Added `clubs_used` field to radar response so frontend knows which clubs contributed to the aggregation.
+- End-to-end verification: API returns correct `{axes, user: {values, raw}, pga: {values, raw}, clubs_used}` with 5 axes (Carry, Dispersion, Spin Rate, Launch Angle, Ball Speed).
+
+**TODO 70 — Dispersion Boundary Always P90:**
+- `compute_dispersion_boundary()` now uses hardcoded `BOUNDARY_PERCENTILE = 90` for the hull calculation.
+- The `percentile` parameter is accepted for API compatibility but does not affect boundary computation.
+- Scatter dots (`dispersion_data()`) show ALL non-excluded shots — no percentile filtering there.
+- Boundary always represents P90 of all displayed shots, regardless of UI percentile selector.
+- **Key architectural note:** The original code used `percentile` directly for filtering. The fix ensures boundary is always P90. If future work adds percentile filtering to scatter dots, the boundary function signature supports passing it through.
+
+**Test impact:** 212 tests pass (32 new from Hockney's `test_todo_67_70.py`). Same 3 pre-existing loft_analysis failures remain (unrelated).
