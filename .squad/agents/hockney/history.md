@@ -155,3 +155,94 @@ TODO 65 (P90 dispersion boundary): 16 tests
 - Excluded shots correctly excluded from boundary computation
 
 **Score:** 153/156 passing (same 3 pre-existing loft failures)
+
+### 2026-03-23 — Dispersion carry geometry tests (TODO 66) — 27 new tests, 180 total passing
+
+**File created:**
+- `tests/test_dispersion_carry_geometry.py` — 27 tests across 5 classes
+
+**Test coverage by category:**
+
+Geometry correctness (9 tests):
+- Straight shot (offline=0) → carry unchanged
+- Slight correction (offline=10, carry=100 → ≈99.5)
+- Significant correction (offline=50, carry=100 → ≈86.6)
+- All-lateral edge case (offline=carry → 0 or skipped)
+- Parametrized combos: straight, slight, significant, realistic wedge, driver with tiny offline
+
+Edge cases (7 tests):
+- offline > carry (bad data) → gracefully skipped
+- carry = 0 → handled without crash
+- offline = 0 → no correction
+- Very small offline (< 0.01) → negligible
+- Negative offline (left/right symmetry)
+- Mixed normal + bad data shots in same query
+
+Integration — boundary (3 tests):
+- Boundary carry values ≤ raw carry (triangle inequality)
+- Multi-club boundaries correctly separated after correction
+- Shot carries ≤ max raw carry
+
+Regression (6 tests):
+- carry-distribution uses raw carry (NOT corrected) ✓
+- spin-carry uses raw carry ✓
+- wedge matrix uses raw carry ✓
+- club matrix uses raw carry ✓
+- launch-spin-stability unaffected ✓
+- radar-comparison unaffected ✓
+
+Offline preservation (2 tests):
+- Offline value unchanged in dispersion response
+- Negative offline preserved
+
+**Key findings:**
+- Fenster implemented `_pythagorean_forward(carry, offline)` correctly — returns None for invalid data, causing those shots to be skipped
+- Both `dispersion_data()` and `compute_dispersion_boundary()` use the correction
+- All 153 pre-existing tests pass; all 27 new tests pass
+- Final score: 180/183 (same 3 pre-existing loft failures)
+
+**Decision documented:** Bad data (|offline| ≥ carry) silently dropped from dispersion, not clamped. Dispersion chart may show fewer shots than shots page for sessions with geometrically invalid data.
+
+**Test coverage by category:**
+
+Geometry correctness (9 tests):
+- Straight shot (offline=0) → carry unchanged
+- Slight correction (offline=10, carry=100 → ≈99.5)
+- Significant correction (offline=50, carry=100 → ≈86.6)
+- All-lateral edge case (offline=carry → 0 or skipped)
+- 5 parametrized combos: straight, slight, significant, realistic wedge, driver tiny-offline
+
+Edge cases (7 tests):
+- offline > carry (bad data) → gracefully handled (skipped via `_pythagorean_forward` returning None)
+- carry = 0 → handled without crash
+- offline = 0 → no correction
+- Very small offline (0.5 on 160 carry) → negligible correction < 0.01
+- Negative offline → works (squaring negates sign)
+- Left/right symmetry → identical corrected carry
+- Mixed normal + bad data shots → no crash, valid shots survive
+
+Integration — boundary (3 tests):
+- Boundary carry values ≤ raw carry (triangle inequality)
+- Multi-club boundaries correctly separated after correction
+- Shot carries ≤ max raw carry
+
+Regression (6 tests):
+- carry-distribution uses raw carry (NOT corrected)
+- spin-carry uses raw carry
+- wedge matrix uses raw carry
+- club matrix uses raw carry
+- launch-spin-stability not affected
+- radar-comparison not affected
+
+Offline preservation (2 tests):
+- Offline value unchanged in dispersion response
+- Negative offline preserved
+
+**Key findings:**
+- Fenster already implemented `_pythagorean_forward(carry, offline)` in analytics.py
+- Returns `None` for invalid data (carry ≤ 0, |offline| ≥ carry), causing those shots to be skipped
+- Both `dispersion_data()` and `compute_dispersion_boundary()` use the correction
+- `dispersion_data()` rounds corrected carry to 1 decimal place
+- All other chart endpoints and matrix functions use raw carry — correctly isolated
+
+**Score:** 180/183 passing (same 3 pre-existing loft failures)

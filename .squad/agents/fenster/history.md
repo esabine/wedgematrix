@@ -148,6 +148,16 @@ Implemented across 3 features:
 
 Cross-agent coordination:
 - McManus updated 4 templates (wedge_matrix, print_card, import, analytics) to reflect new UI
+
+### 2026-03-23 — TODO 66 Dispersion Geometry Completed
+**Outcome:** SUCCESS — 153/156 tests passing (+ Hockney's 27 new tests: 180/183)
+
+- **TODO 66 (Dispersion Carry Geometry):** Applied Pythagorean correction `sqrt(carry² - offline²)` in `dispersion_data()` and `compute_dispersion_boundary()` to convert raw CSV carry (hypotenuse) to true forward distance.
+- **Implementation:** Helper `_pythagorean_forward(carry, offline)` returns None for invalid data (carry ≤ 0, |offline| ≥ carry) causing bad shots to be skipped, not clamped.
+- **No regression:** All other endpoints (carry-distribution, club-matrix, wedge-matrix, spin-carry, etc.) use raw carry unchanged.
+- **Decision documented:** Bad data silently skipped from dispersion results — dispersion shot count may differ from shots page for sessions with geometrically invalid data.
+
+Paired with Hockney's 27 correctness, edge case, integration, and regression tests. Decisions merged (deduped). Ready for commit.
 - Hockney added 28 tests validating all three features + DB migration
 - All tests pass; 3 pre-existing loft analysis failures remain (not caused by batch 5)
 
@@ -160,3 +170,13 @@ Cross-agent coordination:
 - **Percentile semantics:** The `percentile` param (e.g., 75) defines the range as the middle 75% of both carry and offline values. `low_pct = (100 - percentile) / 2`, `high_pct = 100 - low_pct`. So P75 keeps shots between P12.5 and P87.5 on each axis.
 - **Test updates:** Updated 4 dispersion tests in `test_chart_endpoints.py` to expect the new envelope format. Single-shot test verifies empty boundary. All 153 tests pass (3 pre-existing loft failures unchanged).
 - **Key contract — dispersion API:** Response: `{shots: [{carry, offline, club, club_short}], dispersion_boundary: {club_name: [{carry, offline}]}}`. Boundary is a closed loop (last point == first point). Empty dict `{}` when no boundaries computable.
+
+### 2026-03-23 — TODO 66: Dispersion Chart Carry Distance Geometry Fix
+- **Problem:** Dispersion chart treated CSV carry as literal forward distance (y-axis), but carry is actually the *hypotenuse* — the total distance the ball traveled. The true forward distance toward the target is sqrt(carry² - offline²).
+- **Fix:** New private helper _pythagorean_forward(carry, offline) in services/analytics.py. Returns sqrt(carry² - offline²) with edge cases: returns None if carry≤0, if |offline|≥carry (bad data), or if either is None. Returns carry unchanged if offline==0 (pure straight shot, no correction needed).
+- **Applied to dispersion_data():** Each shot's y-axis value is now the corrected forward distance, not raw carry. Offline (x-axis) unchanged.
+- **Applied to compute_dispersion_boundary():** Boundary computation uses corrected forward distances for all carry values, ensuring the P90 hull is computed in the corrected coordinate space.
+- **No DB changes:** Correction is display-time only. Stored carry values remain the raw hypotenuse.
+- **No API shape change:** Response still {shots: [{carry, offline, club, club_short}], dispersion_boundary: {club: [{carry, offline}]}}. The carry key now holds the corrected forward distance. Frontend needs no changes.
+- **Practical impact:** For typical shots (offline 3-10 yards on a 150+ yard carry), the correction is small — usually <1 yard. It matters more for wild offline shots on shorter clubs.
+- **Test impact:** All 153 tests pass. No assertions broke because the correction is small relative to test data ranges (offlines ≤10 yards on carries ≥111 yards).
