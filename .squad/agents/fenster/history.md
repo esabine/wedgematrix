@@ -114,3 +114,26 @@
 - **Backup:** `golf_analytics.db.bak` created before any changes.
 - **Duplicate detection method:** Same filename + same session_date = duplicate. Also caught `test.csv` as a renamed copy by comparing shot data (identical carry/speed/spin values). Partial batch imports (5 shots vs 100) identified by shot count disparity.
 - **Surviving state:** 4 sessions, 469 shots, 11 exclusions intact (8 in clevelands-03-12, 1 in esabine-03-08, 2 in esabine-03-17).
+
+### 2026-03-22 — TODOs 61-63: Test-Data Sessions, Swing Size Rename, PW in Wedge Matrix
+- **TODO 61 — Test-data session facility:**
+  - Added `is_test` Boolean column to `sessions` table (default False). Migration via `ALTER TABLE` in `_migrate_add_is_test()` for existing DBs.
+  - New endpoint `POST /api/sessions/<id>/toggle-test` toggles the flag and returns `{success, id, is_test}`.
+  - `Session.to_dict()` now includes `is_test`.
+  - All aggregate data queries (dashboard, analytics, matrices, shots, API endpoints) exclude test sessions by default when `session_id` is None. Accept `include_test=true` query param to include them.
+  - When a specific `session_id` is selected, test filtering is bypassed — user explicitly chose that session.
+  - `get_shots_query()` in analytics.py gained `include_test=False` param. When False and session_id is None, joins Session and filters `is_test == False`.
+  - `build_club_matrix()` and `build_wedge_matrix()` both accept `include_test` param with same logic.
+  - Dashboard, sessions list, /api/sessions all filter by default.
+- **TODO 62 — Swing size rename:**
+  - Removed `4/4` from `SWING_SIZES` and `FRACTION_SIZES` in `wedge_matrix.py`.
+  - Renamed: `3/4` → `3/3`, `2/4` → `2/3`, `1/4` → `1/3`.
+  - DB migration in `_migrate_rename_swing_sizes()` updates existing shot records.
+  - Runtime `SWING_RENAME` mapping in `build_wedge_matrix()` handles any unmigrated old values (e.g., in-memory test DBs).
+  - `4/4` shots (15 records) remain in DB but don't appear in wedge matrix display.
+  - McManus had already updated all templates (wedge_matrix.html, print_card.html, import.html, shots.html) with new values.
+- **TODO 63 — PW in wedge matrix:**
+  - `WEDGE_CLUBS` changed from `['AW', 'SW', 'LW']` to `['PW', 'AW', 'SW', 'LW']`.
+  - PW is the first (leftmost) column. Backend data now matches McManus's template updates (PW header was already in wedge_matrix.html and print_card.html).
+  - No PW wedge data currently exists in DB (only AW/SW/LW imported so far), but the column renders correctly as empty cells.
+- **Test status:** 133 passed, 3 failed (pre-existing loft analysis failures, unchanged). Removed `xfail` marker from `test_old_swing_labels_mapped_correctly` since runtime mapping now works.

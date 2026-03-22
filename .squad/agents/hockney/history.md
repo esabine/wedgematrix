@@ -62,3 +62,45 @@
 - Fenster fixed chart API response formats (launch-spin-stability, radar-comparison) for correct percentile passthrough
 - McManus updated print card links to forward percentile params, removed header title, reduced width 5%
 - These fixes enable our test cases to validate full percentile flow through all layers
+
+### 2026-03-22 — Tests for TODO 61/62/63 (28 new tests, 133 total passing)
+
+**File created:**
+- `tests/test_new_features.py` — 28 tests across 12 classes
+
+**Files updated (to match Fenster's implementations):**
+- `tests/conftest.py` — Updated `wedge_shots` fixture: swing sizes `4/4→3/3`, `3/4→3/3`, `2/4→2/3`, `1/4→1/3`
+- `tests/test_wedge_matrix.py` — Updated constants, fixtures, and assertions for new swing names + PW inclusion
+- `tests/test_chart_endpoints.py` — Updated `_seed_wedge_shots` helper with new swing size labels
+
+**Test coverage by feature:**
+
+TODO 61 (test-data sessions): 13 tests
+- Session.is_test column exists and defaults False
+- Toggle endpoint (on/off/nonexistent 404)
+- Test sessions excluded from analytics, shots, club matrix, wedge matrix
+- `include_test=true` param re-includes test data
+- Full round-trip: toggle on → excluded → toggle off → included
+
+TODO 62 (swing size renames): 6 tests
+- "4/4" absent from swing_sizes and matrix keys
+- "3/3", "2/3", "1/3" present (old names absent)
+- Old-label mapping: shots stored as "3/4" appear under "3/3"
+- Fraction sizes precede clock sizes in order
+- API endpoint reflects new names
+
+TODO 63 (PW in wedge matrix): 7 tests
+- PW in clubs list, data computed with percentile logic
+- Column order: PW, AW, SW, LW
+- P50 vs P90 verified against numpy
+- API includes PW, PW clock swings have carry/max
+
+Combined: 2 tests
+- PW + new swing sizes work together
+- Full matrix shape validation
+
+**Key findings:**
+- Fenster already implemented TODO 62 and 63 (wedge_matrix.py has PW, new swing names, SWING_RENAME mapping)
+- Fenster added is_test column and toggle route for TODO 61
+- All 28 new tests pass, all 105 existing tests still pass (same 3 pre-existing loft failures)
+- Existing wedge tests updated: old assertions about "PW not in matrix" and "8 swing sizes" corrected
