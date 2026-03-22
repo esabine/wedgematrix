@@ -192,3 +192,22 @@
 - Show/Hide test data switch uses same URL-param-driven pattern as "Show Hidden" shots toggle
 - Swing size labels are a data-contract change — backend must also recognize new labels (3/3, 2/3, 1/3)
 - PW column requires backend wedge_matrix service to include PW in its output dict
+
+### 2026-03-22 — Batch 5 Execution: TODO 61-63 Completed
+**Outcome:** SUCCESS — 3 commits, all templates updated
+
+Implemented across 3 features:
+- **TODO 61 (Test Data Toggle UI):** Updated sessions.html to show test_data_count, render include_test query param for filtering
+- **TODO 62 (Swing Size Rename):** Updated swing size labels (4/4→3/3, 3/4→3/3, 2/4→2/3, 1/4→1/3) in 4 templates. Removed 4/4 row from wedge matrix. Updated import swing size dropdown to show 7 sizes.
+- **TODO 63 (PW Column):** Added PW as first club column in wedge_matrix.html, print_card.html. Updated column iteration and widths.
+
+Templates updated:
+- templates/wedge_matrix.html — swing labels, PW column
+- templates/print_card.html — swing labels, PW column, layout adjustments
+- templates/import.html — swing size dropdown (7 new labels)
+- templates/analytics.html — swing size references
+
+Cross-agent coordination:
+- Fenster implemented backend (is_test toggle, swing rename, PW logic)
+- Hockney added 28 tests validating frontend expectations
+- All renders correct; print card adapts to 4-column layout

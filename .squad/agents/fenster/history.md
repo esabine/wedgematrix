@@ -137,3 +137,16 @@
   - PW is the first (leftmost) column. Backend data now matches McManus's template updates (PW header was already in wedge_matrix.html and print_card.html).
   - No PW wedge data currently exists in DB (only AW/SW/LW imported so far), but the column renders correctly as empty cells.
 - **Test status:** 133 passed, 3 failed (pre-existing loft analysis failures, unchanged). Removed `xfail` marker from `test_old_swing_labels_mapped_correctly` since runtime mapping now works.
+
+### 2026-03-22 — Batch 5 Execution: TODO 61-63 Completed
+**Outcome:** SUCCESS — 133 tests passing
+
+Implemented across 3 features:
+- **TODO 61 (Test Session Filtering):** Added is_test_data column, toggle endpoint (POST /api/sessions/<id>/toggle-test), filtering logic defaults to exclude test data in aggregates, include_test param to show test data
+- **TODO 62 (Swing Size Rename):** Updated SWING_SIZES to remove 4/4, renamed 3/4→3/3, 2/4→2/3, 1/4→1/3. Idempotent DB migration on startup. Runtime mapping handles both old/new names. 4/4 shots (15 total) remain in DB but excluded from wedge matrix.
+- **TODO 63 (PW Column):** Added PW to WEDGE_CLUBS as first column. Updated FRACTION_SIZES. Club classification recognizes PW.
+
+Cross-agent coordination:
+- McManus updated 4 templates (wedge_matrix, print_card, import, analytics) to reflect new UI
+- Hockney added 28 tests validating all three features + DB migration
+- All tests pass; 3 pre-existing loft analysis failures remain (not caused by batch 5)

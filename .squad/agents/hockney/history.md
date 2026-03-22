@@ -104,3 +104,24 @@ Combined: 2 tests
 - Fenster added is_test column and toggle route for TODO 61
 - All 28 new tests pass, all 105 existing tests still pass (same 3 pre-existing loft failures)
 - Existing wedge tests updated: old assertions about "PW not in matrix" and "8 swing sizes" corrected
+
+### 2026-03-22 — Batch 5 Cross-Agent Update
+**Outcome:** Orchestration Complete — All 3 agents report success
+
+Fenster (Backend):
+- TODO 61: is_test_data column, toggle endpoint, filtering logic in get_shots_query
+- TODO 62: swing rename (SWING_SIZES, SWING_RENAME mapping, idempotent DB migration)
+- TODO 63: PW in WEDGE_CLUBS, updated FRACTION_SIZES
+- 133 tests passing
+
+McManus (Frontend):
+- TODO 61: sessions.html toggle UI, include_test query param support
+- TODO 62: Updated 4 templates (wedge_matrix, print_card, import, analytics) with new swing labels + removed 4/4 row
+- TODO 63: Updated 4 templates with PW as first club column
+- 3 commits, all templates render correctly
+
+Hockney (Tester):
+- 28 new tests created, all passing
+- Fixture updates for new swing names and PW column
+- Validation of DB migration idempotency
+- Final score: 133/136 passing (3 pre-existing loft failures)

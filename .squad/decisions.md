@@ -127,6 +127,26 @@ Route endpoint names match existing frontend `url_for()` references:
 - Rationale: keeps all shots-page JS in one place, eliminates potential timing/scope conflicts between app.js and the inline script
 - Impact: no behavior change on other pages (no other page uses batch select)
 
+### 17. Test Session Filtering Strategy
+**Date:** 2026-03-22 | **Author:** Fenster | **Status:** Implemented
+
+- **When `session_id` is provided:** No test filtering — user explicitly selected that session, even if it's marked test.
+- **When aggregating across sessions (`session_id=None`):** Exclude test sessions by default. Accept `include_test=true` query param to include them.
+- **Session dropdowns (matrix/analytics pages):** Show all sessions including test ones, so users can still select a test session if they want to view it directly.
+- **`get_shots_query` default:** `include_test=False` so all analytics functions automatically exclude test sessions without needing signature changes.
+- **Impact:** All route handlers, API endpoints, and service functions respect this convention. Frontend adds `include_test=true` param only if it wants to show test data in aggregate views. Toggle endpoint at `POST /api/sessions/<id>/toggle-test`.
+
+### 18. Wedge Matrix — Swing Size Rename + PW Column
+**Date:** 2026-03-22 | **Author:** Fenster | **Status:** Implemented
+
+- **Swing sizes:** `['3/3', '2/3', '1/3', '10:2', '10:3', '9:3', '8:4']`. No more 4/4.
+- **FRACTION_SIZES:** `{'3/3', '2/3', '1/3'}` — carry only cells.
+- **WEDGE_CLUBS:** `['PW', 'AW', 'SW', 'LW']` — PW first.
+- **DB migration:** Renames old swing_size values on app startup. Idempotent (no-op if already renamed).
+- **Runtime mapping:** `build_wedge_matrix` also maps old names at query time for robustness (handles unmigrated DBs and in-memory test DBs).
+- **4/4 shots:** 15 shots remain in DB with swing_size='4/4' — they're real data but excluded from wedge matrix display. Visible on the shots page if filtered by swing_size.
+- **Impact:** Templates already updated by McManus — no frontend work needed. Any future import of wedge shots must use the new swing size names. The import template dropdown already shows the new values.
+
 ## Governance
 
 - All meaningful changes require team consensus
