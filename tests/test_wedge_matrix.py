@@ -1,8 +1,9 @@
 """Tests for services.wedge_matrix — wedge matrix generation.
 
 Wedge matrix rules:
-- Only AW, SW, LW (PW NOT included)
-- Fraction swings (4/4, 3/4, 2/4, 1/4): show Carry only
+- PW, AW, SW, LW (PW now included, column order PW first)
+- 4/4 removed; fractions renamed: 3/3, 2/3, 1/3
+- Fraction swings (3/3, 2/3, 1/3): show Carry only
 - Clock swings (10:2, 10:3, 9:3, 8:4): show Carry/Max
 - Empty cell if no data for club+swing combo
 """
@@ -10,30 +11,30 @@ import pytest
 import numpy as np
 from tests.conftest import _make_shot
 
-ALL_SWING_SIZES = ['4/4', '3/4', '2/4', '1/4', '10:2', '10:3', '9:3', '8:4']
-FRACTION_SWINGS = ['4/4', '3/4', '2/4', '1/4']
+ALL_SWING_SIZES = ['3/3', '2/3', '1/3', '10:2', '10:3', '9:3', '8:4']
+FRACTION_SWINGS = ['3/3', '2/3', '1/3']
 CLOCK_SWINGS = ['10:2', '10:3', '9:3', '8:4']
-WEDGE_CLUBS = ['AW', 'SW', 'LW']
+WEDGE_CLUBS = ['PW', 'AW', 'SW', 'LW']
 
 
 class TestWedgeMatrixClubs:
 
-    def test_wedge_matrix_aw_sw_lw_only(self, app, db, wedge_shots,
+    def test_wedge_matrix_pw_aw_sw_lw(self, app, db, wedge_shots,
                                          sample_wedge_session):
-        """Wedge matrix must only include AW, SW, LW — NOT PW."""
+        """Wedge matrix must include PW, AW, SW, LW."""
         from services.wedge_matrix import generate_wedge_matrix
 
         with app.app_context():
-            # Also add a PW shot to verify it's excluded
+            # Add a PW shot to verify it's included
             db.session.add(_make_shot(
                 sample_wedge_session.id, 'P-Wedge', 'PW', 115.0, 118.0,
-                swing_size='4/4', club_index=99))
+                swing_size='3/3', club_index=99))
             db.session.commit()
 
             matrix = generate_wedge_matrix(
                 session_id=sample_wedge_session.id, percentile=75)
 
-        # Columns should be AW, SW, LW only
+        # Columns should include PW, AW, SW, LW
         clubs_in_matrix = set()
         if isinstance(matrix, dict):
             for swing, clubs in matrix.items():
@@ -44,8 +45,7 @@ class TestWedgeMatrixClubs:
                 for club in row.get('clubs', {}).keys():
                     clubs_in_matrix.add(club)
 
-        assert 'PW' not in clubs_in_matrix
-        # At least AW and SW should be present (LW might also be there)
+        assert 'PW' in clubs_in_matrix, "PW must now be in the wedge matrix"
         assert 'AW' in clubs_in_matrix or len(clubs_in_matrix) >= 2
 
 
@@ -53,7 +53,7 @@ class TestWedgeMatrixFractions:
 
     def test_wedge_matrix_fraction_carry_only(self, app, db, wedge_shots,
                                                sample_wedge_session):
-        """Fraction swing sizes (4/4, 3/4, 2/4, 1/4) show carry ONLY."""
+        """Fraction swing sizes (3/3, 2/3, 1/3) show carry ONLY."""
         from services.wedge_matrix import generate_wedge_matrix
 
         with app.app_context():
@@ -61,7 +61,6 @@ class TestWedgeMatrixFractions:
                 session_id=sample_wedge_session.id, percentile=75)
 
         # For fraction swings, the cell should have 'carry' but NOT 'max'
-        # (or max should be None/absent)
         for swing in FRACTION_SWINGS:
             if isinstance(matrix, dict) and swing in matrix:
                 for club, cell in matrix[swing].items():
@@ -139,28 +138,28 @@ class TestWedgeMatrixExclusions:
         from services.wedge_matrix import generate_wedge_matrix
 
         with app.app_context():
-            # Two normal AW 4/4 shots
+            # Two normal AW 3/3 shots
             db.session.add(_make_shot(
                 sample_wedge_session.id, 'G-Wedge', 'AW', 85.0, 87.0,
-                swing_size='4/4', club_index=0))
+                swing_size='3/3', club_index=0))
             db.session.add(_make_shot(
                 sample_wedge_session.id, 'G-Wedge', 'AW', 90.0, 92.0,
-                swing_size='4/4', club_index=1))
-            # One excluded AW 4/4 shot with extreme carry
+                swing_size='3/3', club_index=1))
+            # One excluded AW 3/3 shot with extreme carry
             db.session.add(_make_shot(
                 sample_wedge_session.id, 'G-Wedge', 'AW', 200.0, 205.0,
-                swing_size='4/4', excluded=True, club_index=2))
+                swing_size='3/3', excluded=True, club_index=2))
             db.session.commit()
 
             matrix = generate_wedge_matrix(
                 session_id=sample_wedge_session.id, percentile=75)
 
-        # The carry value for AW 4/4 should be based on [85, 90], not [85, 90, 200]
+        # The carry value for AW 3/3 should be based on [85, 90], not [85, 90, 200]
         if isinstance(matrix, dict):
-            cell = matrix.get('4/4', {}).get('AW')
+            cell = matrix.get('3/3', {}).get('AW')
         elif isinstance(matrix, list):
             row = next((r for r in matrix
-                        if r.get('swing_size') == '4/4'), None)
+                        if r.get('swing_size') == '3/3'), None)
             cell = row.get('clubs', {}).get('AW') if row else None
 
         if cell is not None:
@@ -179,7 +178,7 @@ class TestWedgeMatrixPercentile:
             for i, carry in enumerate([60, 65, 70, 75, 80]):
                 db.session.add(_make_shot(
                     sample_wedge_session.id, 'S-Wedge', 'SW', float(carry),
-                    float(carry + 2), swing_size='4/4', club_index=i))
+                    float(carry + 2), swing_size='3/3', club_index=i))
             db.session.commit()
 
             m50 = generate_wedge_matrix(
@@ -200,24 +199,24 @@ class TestWedgeMatrixPercentile:
                 return None
             return cell['carry'] if isinstance(cell, dict) else cell
 
-        c50 = _get_carry(m50, '4/4', 'SW')
-        c90 = _get_carry(m90, '4/4', 'SW')
+        c50 = _get_carry(m50, '3/3', 'SW')
+        c90 = _get_carry(m90, '3/3', 'SW')
         if c50 is not None and c90 is not None:
             assert c90 >= c50
 
 
 class TestAllSwingSizesPresent:
 
-    def test_all_eight_swing_sizes_present(self, app, db,
+    def test_all_seven_swing_sizes_present(self, app, db,
                                             sample_wedge_session):
-        """The matrix structure must include all 8 swing size rows."""
+        """The matrix structure must include all 7 swing size rows."""
         from services.wedge_matrix import generate_wedge_matrix
 
         with app.app_context():
             # Add at least one shot so the matrix generates
             db.session.add(_make_shot(
                 sample_wedge_session.id, 'G-Wedge', 'AW', 80.0, 82.0,
-                swing_size='4/4', club_index=0))
+                swing_size='3/3', club_index=0))
             db.session.commit()
 
             matrix = generate_wedge_matrix(

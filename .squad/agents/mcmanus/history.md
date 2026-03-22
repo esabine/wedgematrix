@@ -228,3 +228,20 @@ Cross-agent coordination:
 - Fenster implemented backend (is_test toggle, swing rename, PW logic)
 - Hockney added 28 tests validating frontend expectations
 - All renders correct; print card adapts to 4-column layout
+
+
+### 2026-03-22 — Gapping Label Placement Fix (TODO 69)
+
+**Problem:** Gap badges in the Carry Distance & Gapping chart were positioned directly above each bar, but gapping is a between-clubs metric. This made it look like gapping was a property of a single club.
+
+**Fix (charts.js — initCarryDistribution):**
+- Gap badge now centered horizontally between the two adjacent bars it represents (`midX = (prevBar.x + bar.x) / 2`)
+- Badge sits above the taller bar with 22px clearance, rendered as a pill (`roundRect` with 8px radius)
+- Bracket connector lines from badge edges down to each bar top replace the old dashed diagonal line
+- Font reduced from bold 11px to bold 10px for visual subordination to bar values
+- Loop starts at `i = 1` (skips first club which has no predecessor) — cleaner than the old `i = 0` with null-checks
+- Y-axis `grace: '15%'` + `layout.padding.top: 10` prevents badge clipping at chart edge
+
+**Tooltip improvement:** Hover on any bar now shows both `Gap to next club` and `Gap from prev club` (bidirectional), not just `Gap from prev`.
+
+**Key pattern:** Canvas annotations that represent relationships (gaps, deltas) between data points should be visually positioned between those points, not on either one.

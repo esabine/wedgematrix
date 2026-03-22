@@ -147,20 +147,30 @@ function initCarryDistribution(data) {
                     callbacks: {
                         afterLabel: function (ctx) {
                             var idx = ctx.dataIndex;
-                            var g = gaps[idx];
-                            if (g !== null && g !== undefined) {
-                                var warning = g > 20 ? ' ⚠ too large' : (g < 5 ? ' ⚠ too small' : '');
-                                return 'Gap from prev: ' + g + 'yd' + warning;
+                            var lines = [];
+                            // Gap to shorter club (this club's gap value)
+                            if (idx + 1 < gaps.length && gaps[idx + 1] != null) {
+                                var gNext = gaps[idx + 1];
+                                var warn = gNext > 20 ? ' ⚠ too large' : (gNext < 5 ? ' ⚠ too small' : '');
+                                lines.push('Gap to next club: ' + gNext + 'yd' + warn);
                             }
-                            return '';
+                            // Gap from longer club (previous club's perspective)
+                            if (gaps[idx] != null) {
+                                var gPrev = gaps[idx];
+                                var warn2 = gPrev > 20 ? ' ⚠ too large' : (gPrev < 5 ? ' ⚠ too small' : '');
+                                lines.push('Gap from prev club: ' + gPrev + 'yd' + warn2);
+                            }
+                            return lines.join('\n');
                         },
                     },
                 },
             },
             scales: {
                 x: { title: { display: true, text: 'Club' } },
-                y: { title: { display: true, text: 'Carry (yards)' }, beginAtZero: false },
+                y: { title: { display: true, text: 'Carry (yards)' }, beginAtZero: false,
+                     grace: '15%' },
             },
+            layout: { padding: { top: 10 } },
         },
         plugins: [{
             id: 'gapAnnotations',
@@ -168,44 +178,49 @@ function initCarryDistribution(data) {
                 var ctx = chart.ctx;
                 var meta = chart.getDatasetMeta(0);
                 ctx.save();
-                ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif';
+                ctx.font = 'bold 10px "Segoe UI", Arial, sans-serif';
                 ctx.textAlign = 'center';
 
-                for (var i = 0; i < gaps.length; i++) {
+                for (var i = 1; i < gaps.length; i++) {
                     var g = gaps[i];
                     if (g === null || g === undefined) continue;
 
                     var bar = meta.data[i];
-                    if (!bar) continue;
+                    var prevBar = meta.data[i - 1];
+                    if (!bar || !prevBar) continue;
 
-                    // Draw gap badge above the bar
-                    var x = bar.x;
-                    var y = bar.y - 8;
+                    // Position badge centered between the two bars it connects
+                    var midX = (prevBar.x + bar.x) / 2;
+                    var higherY = Math.min(prevBar.y, bar.y);
+                    var badgeY = higherY - 22;
                     var text = g + 'yd';
-                    var tw = ctx.measureText(text).width + 8;
+                    var tw = ctx.measureText(text).width + 10;
+                    var badgeH = 16;
+                    var badgeR = 8;
 
-                    // Badge background
+                    // Badge pill background
                     ctx.fillStyle = gapColor(g);
                     ctx.beginPath();
-                    ctx.roundRect(x - tw / 2, y - 14, tw, 17, 3);
+                    ctx.roundRect(midX - tw / 2, badgeY - badgeH / 2, tw, badgeH, badgeR);
                     ctx.fill();
 
                     // Badge text
                     ctx.fillStyle = '#fff';
-                    ctx.fillText(text, x, y - 1);
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(text, midX, badgeY);
 
-                    // Connector line between adjacent bars
-                    if (i > 0 && meta.data[i - 1]) {
-                        var prevBar = meta.data[i - 1];
-                        ctx.strokeStyle = gapBorderColor(g);
-                        ctx.lineWidth = 1.5;
-                        ctx.setLineDash([3, 3]);
-                        ctx.beginPath();
-                        ctx.moveTo(prevBar.x, prevBar.y);
-                        ctx.lineTo(bar.x, bar.y);
-                        ctx.stroke();
-                        ctx.setLineDash([]);
-                    }
+                    // Bracket: thin lines from badge down to each bar top
+                    ctx.strokeStyle = gapBorderColor(g);
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([]);
+                    ctx.beginPath();
+                    // Left arm: badge bottom-left → previous bar top center
+                    ctx.moveTo(midX - tw / 2 + 4, badgeY + badgeH / 2);
+                    ctx.lineTo(prevBar.x, prevBar.y - 2);
+                    // Right arm: badge bottom-right → current bar top center
+                    ctx.moveTo(midX + tw / 2 - 4, badgeY + badgeH / 2);
+                    ctx.lineTo(bar.x, bar.y - 2);
+                    ctx.stroke();
                 }
                 ctx.restore();
             },

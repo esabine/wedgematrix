@@ -168,25 +168,23 @@ def mixed_club_shots(app, db, sample_session, seeded_db):
 
 @pytest.fixture
 def wedge_shots(app, db, sample_wedge_session, seeded_db):
-    """Wedge shots across AW/SW/LW with various swing sizes."""
+    """Wedge shots across AW/SW/LW with various swing sizes (new naming)."""
     entries = [
         # (club, club_short, swing_size, carry, total)
-        ('G-Wedge', 'AW', '4/4', 90.0, 92.0),
-        ('G-Wedge', 'AW', '4/4', 88.0, 90.0),
-        ('G-Wedge', 'AW', '3/4', 72.0, 74.0),
-        ('G-Wedge', 'AW', '3/4', 70.0, 72.0),
-        ('G-Wedge', 'AW', '2/4', 55.0, 57.0),
+        ('G-Wedge', 'AW', '3/3', 72.0, 74.0),
+        ('G-Wedge', 'AW', '3/3', 70.0, 72.0),
+        ('G-Wedge', 'AW', '2/3', 55.0, 57.0),
         ('G-Wedge', 'AW', '10:2', 82.0, 85.0),
         ('G-Wedge', 'AW', '10:2', 78.0, 80.0),
         ('G-Wedge', 'AW', '10:2', 84.0, 87.0),
-        ('S-Wedge', 'SW', '4/4', 80.0, 82.0),
-        ('S-Wedge', 'SW', '4/4', 78.0, 80.0),
-        ('S-Wedge', 'SW', '3/4', 62.0, 64.0),
+        ('S-Wedge', 'SW', '3/3', 80.0, 82.0),
+        ('S-Wedge', 'SW', '3/3', 78.0, 80.0),
+        ('S-Wedge', 'SW', '2/3', 62.0, 64.0),
         ('S-Wedge', 'SW', '10:3', 68.0, 70.0),
         ('S-Wedge', 'SW', '10:3', 72.0, 74.0),
-        ('L-Wedge', 'LW', '4/4', 70.0, 72.0),
-        ('L-Wedge', 'LW', '4/4', 68.0, 70.0),
-        ('L-Wedge', 'LW', '1/4', 25.0, 27.0),
+        ('L-Wedge', 'LW', '3/3', 70.0, 72.0),
+        ('L-Wedge', 'LW', '3/3', 68.0, 70.0),
+        ('L-Wedge', 'LW', '1/3', 25.0, 27.0),
         ('L-Wedge', 'LW', '8:4', 38.0, 40.0),
         ('L-Wedge', 'LW', '8:4', 42.0, 44.0),
     ]

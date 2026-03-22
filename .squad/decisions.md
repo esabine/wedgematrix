@@ -177,6 +177,42 @@ Route endpoint names match existing frontend `url_for()` references:
 - **Boundary datasets labeled `{club} P90`** — filtered from legend and tooltips via label suffix check.
 - **Impact:** Any test asserting `isinstance(data, list)` on the dispersion endpoint needs updating to expect the new dict envelope.
 
+### 22. Dispersion Boundary Tests Need Update for Pythagorean Carry
+**Date:** 2026-03-25 | **Author:** Hockney | **Status:** Observation
+
+- 6 tests in `test_dispersion_boundary.py` fail because `compute_dispersion_boundary()` uses Pythagorean-corrected carry (from TODO 66), but those tests seed shots with raw carry/offline values and expect boundaries based on raw carry ranges.
+- Fix: update seed data in `test_dispersion_boundary.py` to account for the correction (use larger carry values or smaller offlines so corrected carries still produce boundaries). This is a test maintenance task, not a code bug.
+- **Impact:** No production impact. The boundary computation is correct. Only the test assertions are stale.
+
+### 23. Launch-Spin Stability Response Shape Extended
+**Date:** 2026-03-23 | **Author:** Fenster | **Status:** Implemented
+
+- `launch_spin_stability()` response now includes two additional top-level fields:
+  - `high_variance_clusters`: array of `{club, metric, cv, std_dev, shot_count, severity, threshold_cv}` objects identifying clubs with unusually high variance relative to other clubs.
+  - Per-club entries now include `stability: {spin_std, spin_cv, launch_std, launch_cv}` alongside existing `spin`/`launch` box plot stats.
+- **Backward compatible:** Existing `clubs`, `correlation` keys unchanged. Frontend can optionally consume the new fields.
+- **Detection algorithm:** CV (coefficient of variation) compared against median CV across all clubs. Threshold: max(1.5× median, floor of 3.0%).
+- **Impact:** McManus can highlight flagged clusters in the chart UI using the `high_variance_clusters` array and `severity` field.
+
+### 24. Dispersion Boundary Always Uses P90 Regardless of Percentile Selector
+**Date:** 2026-03-23 | **Author:** Fenster | **Status:** Implemented
+
+- `compute_dispersion_boundary()` now hardcodes `BOUNDARY_PERCENTILE = 90` internally.
+- The `percentile` query parameter is accepted for API compatibility but does not change the boundary hull computation.
+- Scatter dots (`dispersion_data()`) always show ALL non-excluded shots with no percentile filtering.
+- Boundary = P90 of all displayed shots, always.
+- **Impact:** Frontend sees the same API shape. Boundary is now wider (P90 vs old P75 default), which better represents the true dispersion area.
+- **Supersedes behavior from Decision 19:** The old code used the `percentile` param to filter shots before hull. Now boundary is always P90.
+
+### 25. Carry Gapping Badge Positioning: Between Bars, Not Above
+**Date:** 2026-03-23 | **Author:** McManus | **Status:** Implemented
+
+- Gap badges in the Carry Distance & Gapping chart are now positioned **between** the two adjacent bars they represent, not above a single bar.
+- A bracket connector (two thin lines from badge edges to bar tops) visually ties the gap to both clubs.
+- Y-axis uses `grace: '15%'` to make room for badges above the tallest bar.
+- **Pattern rule:** Any future chart annotation representing a relationship between data points (gap, delta, difference) must be positioned between the related elements, not on one of them.
+- **Impact:** Visual only — no backend or data contract changes. Tooltip now shows bidirectional gap info on hover.
+
 ## Governance
 
 - All meaningful changes require team consensus
