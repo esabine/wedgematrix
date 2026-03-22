@@ -146,16 +146,45 @@ def flag_errant_shots(session_id, club_short=None, low_pct=10, high_pct=90):
     return flagged_ids
 
 
+def _pythagorean_forward(carry, offline):
+    """Correct carry distance to true forward distance via Pythagorean theorem.
+
+    CSV carry is the hypotenuse (total ball travel distance).
+    True forward = sqrt(carry² - offline²).
+    Returns None for invalid data (carry <= 0 or |offline| >= carry).
+    """
+    if carry is None or offline is None or carry <= 0:
+        return None
+    if offline == 0:
+        return float(carry)
+    carry_sq = carry ** 2
+    off_sq = offline ** 2
+    if off_sq >= carry_sq:
+        return None
+    return float(np.sqrt(carry_sq - off_sq))
+
+
 def dispersion_data(session_id=None, club_short=None, date_from=None):
-    """Get offline vs carry data for dispersion chart."""
+    """Get offline vs corrected-carry data for dispersion chart.
+
+    Carry from CSV is the hypotenuse (total ball travel).  The y-axis
+    needs the true forward distance: sqrt(carry² - offline²).
+    """
     shots = get_shots_query(
         session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
     ).all()
-    return [
-        {'carry': s.carry, 'offline': s.offline, 'club': s.club_short, 'club_short': s.club_short}
-        for s in shots
-        if s.carry is not None and s.offline is not None
-    ]
+    result = []
+    for s in shots:
+        forward = _pythagorean_forward(s.carry, s.offline)
+        if forward is None:
+            continue
+        result.append({
+            'carry': round(forward, 1),
+            'offline': s.offline,
+            'club': s.club_short,
+            'club_short': s.club_short,
+        })
+    return result
 
 
 def spin_vs_carry_data(session_id=None, club_short=None, date_from=None):
@@ -365,15 +394,29 @@ def _box_plot_stats(values):
     }
 
 
-def launch_spin_stability(session_id=None, club_short=None, date_from=None, percentile=75):
-    """Compute launch-spin stability box plot data per club.
+def _coefficient_of_variation(values):
+    """Coefficient of variation (std / mean * 100). Returns None if mean is zero."""
+    arr = np.array(values, dtype=float)
+    mean = float(np.mean(arr))
+    if abs(mean) < 1e-10:
+        return None
+    return round(float(np.std(arr, ddof=1) / abs(mean) * 100), 2) if len(arr) > 1 else 0.0
 
-    For each club, returns box plot stats for spin and launch.
+
+def launch_spin_stability(session_id=None, club_short=None, date_from=None, percentile=75):
+    """Compute launch-spin stability metrics per club.
+
+    For each club, returns box plot stats for spin and launch, plus
+    stability metrics (std_dev, coefficient of variation) for both.
     High-variance clubs get additional attack_angle and ball_speed stats,
     plus a stability analysis.
 
-    Returns {clubs: {club: {spin, launch, high_variance, analysis, ...}}, correlation: str}
-    matching the frontend initLaunchSpinStability() contract.
+    Returns:
+        {
+          clubs: {club: {spin, launch, stability, high_variance, analysis, ...}},
+          correlation: str,
+          high_variance_clusters: [{club, metric, cv, std_dev, shot_count, severity}, ...]
+        }
     """
     from services.club_matrix import CLUB_ORDER
 
@@ -388,6 +431,10 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
 
     result = {}
     high_var_notes = []
+    # Collect CVs across all clubs to detect relative outliers
+    all_spin_cvs = {}
+    all_launch_cvs = {}
+
     for club_name, club_shots in by_club.items():
         spins = [s.spin_rate for s in club_shots if s.spin_rate is not None]
         launches = [s.launch_angle for s in club_shots if s.launch_angle is not None]
@@ -398,10 +445,26 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
         spin_stats = _box_plot_stats(spins)
         launch_stats = _box_plot_stats(launches)
 
+        spin_cv = _coefficient_of_variation(spins)
+        launch_cv = _coefficient_of_variation(launches)
+        spin_std = round(float(np.std(spins, ddof=1)), 2) if len(spins) > 1 else 0.0
+        launch_std = round(float(np.std(launches, ddof=1)), 2) if len(launches) > 1 else 0.0
+
+        if spin_cv is not None:
+            all_spin_cvs[club_name] = spin_cv
+        if launch_cv is not None:
+            all_launch_cvs[club_name] = launch_cv
+
         entry = {
             'club': club_name,
             'spin': spin_stats,
             'launch': launch_stats,
+            'stability': {
+                'spin_std': spin_std,
+                'spin_cv': spin_cv,
+                'launch_std': launch_std,
+                'launch_cv': launch_cv,
+            },
             'shot_count': len(club_shots),
             'high_variance': False,
             'analysis': None,
@@ -444,6 +507,37 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
 
         result[club_name] = entry
 
+    # --- High-variance cluster detection ---
+    # A club is a "cluster" if its CV is >1.5× the median CV across all clubs
+    high_variance_clusters = []
+
+    def _detect_clusters(cv_dict, metric_label):
+        if len(cv_dict) < 2:
+            return
+        cv_vals = list(cv_dict.values())
+        median_cv = float(np.median(cv_vals))
+        # Threshold: 1.5× median CV, with a minimum floor to avoid flagging
+        # everything when all clubs are very consistent
+        threshold = max(median_cv * 1.5, 3.0)
+        for club_name, cv in cv_dict.items():
+            if cv > threshold:
+                severity = 'moderate' if cv < threshold * 2 else 'high'
+                entry = result.get(club_name, {})
+                entry['high_variance'] = True
+                high_variance_clusters.append({
+                    'club': club_name,
+                    'metric': metric_label,
+                    'cv': cv,
+                    'std_dev': entry.get('stability', {}).get(
+                        f'{metric_label}_std', None),
+                    'shot_count': entry.get('shot_count', 0),
+                    'severity': severity,
+                    'threshold_cv': round(threshold, 2),
+                })
+
+    _detect_clusters(all_spin_cvs, 'spin')
+    _detect_clusters(all_launch_cvs, 'launch')
+
     # Sort by CLUB_ORDER
     ordered = {}
     for c in CLUB_ORDER:
@@ -463,7 +557,11 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
     else:
         correlation = f'{high_var_count} of {total_clubs} clubs show high variance. ' + '; '.join(high_var_notes)
 
-    return {'clubs': ordered, 'correlation': correlation}
+    return {
+        'clubs': ordered,
+        'correlation': correlation,
+        'high_variance_clusters': high_variance_clusters,
+    }
 
 
 def radar_comparison(session_id=None, club_short=None, date_from=None, percentile=75):
@@ -592,29 +690,34 @@ def radar_comparison(session_id=None, club_short=None, date_from=None, percentil
         'axes': axes,
         'user': {'values': user_values, 'raw': user_raw},
         'pga': {'values': pga_values, 'raw': pga_raw},
+        'clubs_used': list(by_club.keys()),
     }
 
 
 def compute_dispersion_boundary(session_id=None, club_short=None, date_from=None,
                                 percentile=75, num_smooth_points=60):
-    """Compute a smoothed convex hull boundary for P-percentile dispersion per club.
+    """Compute a smoothed convex hull boundary for P90 dispersion per club.
 
-    For each club, filters shots to those within the P-percentile range of carry
-    distance, then computes a convex hull of (carry, offline) and smooths it with
-    cubic spline interpolation.
+    The boundary always represents the 90th percentile of all displayed shots,
+    regardless of what `percentile` value the user has selected in the UI.
+    The percentile parameter is accepted for API compatibility but does not
+    affect the boundary computation.
 
     Returns dict keyed by club_short: list of {carry, offline} boundary points.
     Clubs with fewer than 3 valid shots or collinear points are omitted.
     """
+    BOUNDARY_PERCENTILE = 90  # Always P90 for the dispersion boundary
+
     shots = get_shots_query(
         session_id=session_id, club_short=club_short, excluded=False, date_from=date_from
     ).all()
 
-    # Group shots by club
+    # Group shots by club, applying Pythagorean correction to carry
     by_club = {}
     for s in shots:
-        if s.carry is not None and s.offline is not None:
-            by_club.setdefault(s.club_short, []).append((s.carry, s.offline))
+        forward = _pythagorean_forward(s.carry, s.offline)
+        if forward is not None:
+            by_club.setdefault(s.club_short, []).append((forward, s.offline))
 
     boundaries = {}
     for club, points in by_club.items():
@@ -622,8 +725,8 @@ def compute_dispersion_boundary(session_id=None, club_short=None, date_from=None
         if len(carries) < 3:
             continue
 
-        # Filter to shots within the percentile range (symmetric around median)
-        low_pct = (100 - percentile) / 2
+        # Filter to shots within the P90 range (symmetric around median)
+        low_pct = (100 - BOUNDARY_PERCENTILE) / 2
         high_pct = 100 - low_pct
         carry_low = float(np.percentile(carries, low_pct))
         carry_high = float(np.percentile(carries, high_pct))
@@ -632,7 +735,7 @@ def compute_dispersion_boundary(session_id=None, club_short=None, date_from=None
         if len(filtered) < 3:
             continue
 
-        # Also filter offline to percentile range
+        # Also filter offline to P90 range
         offlines = [p[1] for p in filtered]
         off_low = float(np.percentile(offlines, low_pct))
         off_high = float(np.percentile(offlines, high_pct))
