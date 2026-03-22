@@ -108,19 +108,20 @@
             <thead>
                 <tr>
                     <th></th>
+                    <th>PW</th>
                     <th>AW</th>
                     <th>SW</th>
                     <th>LW</th>
                 </tr>
             </thead>
             <tbody>
-                {% set swing_sizes = ['4/4', '3/4', '2/4', '1/4', '10:2', '10:3', '9:3', '8:4'] %}
-                {% set fraction_sizes = ['4/4', '3/4', '2/4', '1/4'] %}
+                {% set swing_sizes = ['3/3', '2/3', '1/3', '10:2', '10:3', '9:3', '8:4'] %}
+                {% set fraction_sizes = ['3/3', '2/3', '1/3'] %}
 
                 {% for size in swing_sizes %}
                 <tr class="{% if size == '10:2' %}clock-divider{% endif %}">
                     <td class="club-col">{{ size }}</td>
-                    {% for club in ['AW', 'SW', 'LW'] %}
+                    {% for club in ['PW', 'AW', 'SW', 'LW'] %}
                     <td>
                         {% set cell = wedge_matrix.get(size, {}).get(club) %}
                         {% if cell %}

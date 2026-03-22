@@ -144,7 +144,13 @@ main {
 
 .matrix-cell {
     font-variant-numeric: tabular-nums;
-    min-width: 60px;
+    min-width: 50px;
+}
+
+/* Wedge matrix: narrower columns for 5-col layout (PW/AW/SW/LW) */
+#wedge-matrix-table .matrix-cell {
+    min-width: 44px;
+    padding: 0.35rem 0.4rem;
 }
 
 .matrix-cell.has-data {
@@ -299,6 +305,16 @@ main {
     font-weight: 700;
     font-size: 0.78rem;
     padding: 0.2rem 0.6rem;
+}
+
+/* ---------- Test Data Rows ---------- */
+.test-data-row {
+    background-color: #fff8e1 !important;
+    border-left: 3px solid #ffc107;
+}
+
+.test-data-row:hover {
+    background-color: #fff3cd !important;
 }
 
 /* ---------- Utility ---------- */
