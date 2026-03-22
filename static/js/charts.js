@@ -214,31 +214,115 @@ function initCarryDistribution(data) {
 }
 
 /* ---------- Dispersion Pattern ---------- */
+// Plugin: draw a dotted vertical "Target" line at x=0
+var dispersionTargetLine = {
+    id: 'dispersionTargetLine',
+    afterDraw: function (chart) {
+        var xScale = chart.scales.x;
+        if (!xScale) return;
+        var xPixel = xScale.getPixelForValue(0);
+        if (xPixel < xScale.left || xPixel > xScale.right) return;
+
+        var ctx = chart.ctx;
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = 'rgba(108, 117, 125, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.moveTo(xPixel, chart.scales.y.top);
+        ctx.lineTo(xPixel, chart.scales.y.bottom);
+        ctx.stroke();
+
+        // Label near top
+        ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(108, 117, 125, 0.7)';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText('Target', xPixel + 4, chart.scales.y.top + 12);
+        ctx.restore();
+    },
+};
+
 function initDispersionChart(data) {
     var canvas = document.getElementById('chart-dispersion');
     if (!canvas) return;
     destroyChart('dispersion');
 
-    // Handle both array and empty object
-    var items = Array.isArray(data) ? data : [];
+    // Handle new envelope format {shots: [...], dispersion_boundary: {...}}
+    // or legacy flat array format [...]
+    var items, boundaries;
+    if (data && !Array.isArray(data) && data.shots) {
+        items = data.shots;
+        boundaries = data.dispersion_boundary || null;
+    } else {
+        items = Array.isArray(data) ? data : [];
+        boundaries = null;
+    }
     if (!items.length) return;
 
     var clubMap = {};
+    var clubColorMap = {};
     items.forEach(function (d) {
         var club = d.club || d.club_short;
         if (!clubMap[club]) clubMap[club] = [];
         clubMap[club].push({ x: d.offline, y: d.carry });
     });
 
-    var datasets = Object.keys(clubMap).map(function (club, i) {
+    var clubNames = Object.keys(clubMap);
+    var datasets = clubNames.map(function (club, i) {
+        var color = CLUB_PALETTE[i % CLUB_PALETTE.length];
+        clubColorMap[club] = color;
         return {
             label: club,
             data: clubMap[club],
-            backgroundColor: CLUB_PALETTE[i % CLUB_PALETTE.length],
+            backgroundColor: color,
             pointRadius: 4,
             pointHoverRadius: 6,
         };
     });
+
+    // P90 dispersion boundary datasets
+    var MAX_BOUNDARY_CLUBS = 4;
+    if (boundaries && typeof boundaries === 'object') {
+        var boundaryClubs = Object.keys(boundaries);
+        var showBoundaries = clubNames.length <= MAX_BOUNDARY_CLUBS || clubNames.length === 1;
+
+        if (showBoundaries) {
+            var singleClub = clubNames.length === 1;
+            boundaryClubs.forEach(function (club) {
+                var pts = boundaries[club];
+                if (!Array.isArray(pts) || pts.length < 3) return;
+
+                // Close the loop by repeating the first point
+                var loopData = pts.map(function (p) {
+                    return { x: p.offline, y: p.carry };
+                });
+                loopData.push({ x: pts[0].offline, y: pts[0].carry });
+
+                // Red for single club, otherwise match club scatter color
+                var lineColor = singleClub
+                    ? 'rgba(220, 53, 69, 0.7)'
+                    : (clubColorMap[club] || 'rgba(108, 117, 125, 0.5)');
+                var fillColor = singleClub
+                    ? 'rgba(220, 53, 69, 0.12)'
+                    : lineColor.replace(/[\d.]+\)$/, '0.12)');
+
+                datasets.push({
+                    label: club + ' P90',
+                    data: loopData,
+                    showLine: true,
+                    borderColor: lineColor,
+                    borderWidth: 1.5,
+                    borderDash: [5, 5],
+                    backgroundColor: fillColor,
+                    fill: true,
+                    pointRadius: 0,
+                    pointHitRadius: 0,
+                    tension: 0.3,
+                });
+            });
+        }
+    }
 
     chartInstances['dispersion'] = new Chart(canvas, {
         type: 'scatter',
@@ -246,14 +330,26 @@ function initDispersionChart(data) {
         options: {
             responsive: true,
             plugins: {
-                legend: { position: 'right' },
+                legend: {
+                    position: 'right',
+                    labels: {
+                        filter: function (item) {
+                            // Hide boundary datasets from legend to reduce clutter
+                            return !item.text.endsWith(' P90');
+                        },
+                    },
+                },
                 tooltip: {
                     callbacks: {
                         label: function (ctx) {
+                            if (ctx.dataset.label.endsWith(' P90')) return null;
                             return ctx.dataset.label + ': ' +
                                    ctx.parsed.y + 'yd carry, ' +
                                    ctx.parsed.x + 'yd offline';
                         },
+                    },
+                    filter: function (item) {
+                        return !item.dataset.label.endsWith(' P90');
                     },
                 },
             },
@@ -268,6 +364,7 @@ function initDispersionChart(data) {
                 },
             },
         },
+        plugins: [dispersionTargetLine],
     });
 }
 
