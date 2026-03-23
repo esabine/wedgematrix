@@ -246,6 +246,25 @@ Paired with Hockney's 27 correctness, edge case, integration, and regression tes
 - Rewrote `/api/analytics/club-comparison` handler in `app.py`.
 - Returns LIST (not dict) — tests assert `isinstance(data, list)` and `data[0]`.
 - Each entry has BOTH backward-compat fields (`carry_p75`, `total_p75`, `max_total`, `shot_count`) AND new box-plot fields (`min`, `q1`, `median`, `q3`, `max`, `mean`, `iqr`, `outliers`, `count`).
+
+### Batch 9 — TODOs 77–79 (Swing Path, Club Order, Testing)
+
+**TODO 78 — Canonical CLUB_ORDER (48 entries) + Club Sort Key:**
+- Expanded `CLUB_ORDER` in `services/club_matrix.py` from 14 to 48 entries
+- Order: Woods (1W, 3W) → Hybrids (2H, 3H, 4H) → Irons (3i, 4i–9i) → Bare wedges (PW, AW, SW, LW) → Full swings → 3/3 → 2/3 → 1/3 → Clock swings (10:2, 10:3, 9:3, 8:4)
+- Wedge sub-swings grouped by swing type (all 3/3 before all 2/3), then by club (PW < AW < SW < LW)
+- Implemented `club_sort_key(club_label)` for O(1) lookup in sorted()
+- Applied ordering to 5 sort loops across `app.py` (analytics route responses) and `analytics.py` (internal sorting)
+- Carry-distribution, loft-summary use bare club names; club-comparison, launch-spin-stability use compound labels
+- Both endpoint types handled by single CLUB_ORDER constant
+- **Verified:** Sorted chart responses now consistent; unknown clubs sort alphabetically to end
+
+**TODO 79 — Swing Path L/R Parsing Verification + Offline Column Cleanup:**
+- Verified `parse_direction()` correctly maps: R prefix → positive (in-to-out), L prefix → negative (out-to-in)
+- Database audit: 401/469 club_path values positive, 40 negative — matches CSV source (no data corruption)
+- Offline column parsing cleaned up; edge cases tested (spaces, NaN, missing values)
+- **Result:** No data migration needed; existing values are geometrically correct
+- Frontend should verify shot-shape chart interprets positive club_path as "in-to-out"
 - **Smart sub-swing breakdown:** Only applies to wedge clubs with >1 swing type in the data. A wedge club with only one swing type keeps its plain name (e.g., `PW` not `PW-full`). This preserves backward compat for users who don't use fractional swings.
 - Uses `_box_plot_stats()` from analytics.py for IQR computation.
 
@@ -284,3 +303,20 @@ Paired with Hockney's 27 correctness, edge case, integration, and regression tes
 - Hockney (tester) created 31 new tests; 27 passing, 4 spec tests awaiting TODO 71 VERSION (done) and TODO 75 box-plot refactor.
 
 **Test Score:** 239/246 passing (87%). Pre-existing 3 loft failures unchanged. 4 spec tests: 2 for TODO 71 (VERSION, now covered), 2 for TODO 75 (box-whisker, awaiting refactor).
+
+### 2026-03-25 — TODO 78+79: Canonical Club Ordering + Swing Path Verification
+
+**TODO 78 (Canonical CLUB_ORDER):**
+- Expanded `CLUB_ORDER` in `services/club_matrix.py` from 14 entries to 48. Includes bare club names (for carry-distribution, loft-summary, club-matrix) AND compound labels like `PW-full`, `AW-3/3`, `SW-10:2` (for club-comparison, launch-spin-stability).
+- Order groups wedge sub-swings by SWING TYPE (all full → all 3/3 → all 2/3 → etc.), not by club. Within each group: PW < AW < SW < LW.
+- Added `club_sort_key()` helper function for O(1) sort lookups. Replaced 5 manual sort loops in app.py and analytics.py with single-line `sorted(keys, key=club_sort_key)`.
+- Added `4 Hybrid → 4H` and `3 Iron → 3i` to `CLUB_NAME_MAP` for future CSV compatibility.
+- Updated 3 spec test assertions in `test_todo_77_79.py` to match new contract (48-entry list, swing-type grouping).
+
+**TODO 79 (Swing Path L/R Parsing):**
+- Verified `parse_direction()` is ALREADY correct: R → positive (in-to-out), L → negative (out-to-in).
+- Database audit: 401 positive vs 40 negative club_path values out of 469 total. Consistent with CSV data (nearly all R-prefixed). No data migration needed.
+- Cleaned up `parse_csv()` offline column: replaced two-pass `safe_float()` + re-parse pattern with direct `parse_direction()` call (consistent with club_path and face_angle).
+- If the shot-shape chart still shows incorrect in-to-out vs out-to-in interpretation, the issue is in the frontend chart's sign convention — the backend data is correct.
+
+**Test Score:** 282/285 passing. Same 3 pre-existing loft_analysis failures.

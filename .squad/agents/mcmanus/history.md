@@ -258,6 +258,24 @@ Implemented across 3 features:
 
 Templates updated:
 - templates/wedge_matrix.html — swing labels, PW column
+
+### Batch 9 — TODOs 77–78 (Carry Distance Chart, Club Order Frontend)
+
+**TODO 77 — Concentric Arc Carry Distance Chart (Custom Canvas):**
+- Built custom HTML5 Canvas visualization for carry distance (not Chart.js)
+- Implements concentric arc rendering pattern for visual representation
+- Stored in `chartInstances['carry-distribution']` as `{destroy: function()}` for lifecycle compatibility
+- Canvas element now has custom `mousemove` handler; cleaned up in `destroyChart()`
+- **Pattern rule:** Future custom Canvas charts must provide `destroy()` method and be stored in `chartInstances`
+
+**TODO 78 — Canonical Club Order Applied in Frontend:**
+- Defined `CANONICAL_CLUB_ORDER` array in `charts.js` with 48 entries (bare clubs + compound wedge-swing labels)
+- Order matches backend: Woods → Hybrids (4H) → Irons (3i) → Bare wedges → Full swings → 3/3 → 2/3 → 1/3 → Clock swings
+- Implemented `sortByCanonicalOrder(clubs)` utility for client-side sorting of any club label array
+- Applied to: carry distribution (concentric arc), club comparison (boxplot), launch-spin stability (boxplot)
+- Backend already sorts via backend CLUB_ORDER, frontend re-sorts for safety
+- Unknown clubs sort alphabetically to end
+- **Theme Correction:** Corrected dark theme to light Bootstrap style per user feedback
 - templates/print_card.html — swing labels, PW column, layout adjustments
 - templates/import.html — swing size dropdown (7 new labels)
 - templates/analytics.html — swing size references

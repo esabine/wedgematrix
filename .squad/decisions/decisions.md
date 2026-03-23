@@ -56,6 +56,55 @@ When `|offline| >= carry` (physically impossible data):
 
 ---
 
+## Canonical CLUB_ORDER: 48-Entry List with Compound Wedge Labels
+
+**Date:** 2026-03-25 | **Author:** Fenster | **Status:** Implemented
+
+- `CLUB_ORDER` in `services/club_matrix.py` expanded from 14 bare club names to 48 entries covering both bare names and compound wedge-swing labels.
+- Order: Woods → Hybrids (incl. 4H) → Irons (incl. 3i) → Bare wedges (PW, AW, SW, LW) → Full swings → 3/3 → 2/3 → 1/3 → 10:2 → 10:3 → 9:3 → 8:4.
+- Wedge sub-swings grouped by **swing type** (all 3/3 before all 2/3), NOT by club. Within each group: PW < AW < SW < LW.
+- `club_sort_key()` function provides O(1) lookup for sorted(). Unknown labels sort alphabetically after all known entries.
+- **Impact:** All dict-keyed and list-keyed chart API responses now sort via `club_sort_key`. Carry-distribution, loft-summary use bare names. Club-comparison, launch-spin-stability use compound labels. Both are handled by the same constant.
+- **Frontend note:** No changes needed — the response shapes are unchanged, only key ordering differs.
+
+---
+
+## Swing Path L/R Parsing: Backend Correct, Frontend May Need Audit
+
+**Date:** 2026-03-25 | **Author:** Fenster | **Status:** Verified
+
+- `parse_direction()` correctly maps R prefix → positive, L prefix → negative for club_path and face_angle.
+- Database audit confirmed: 401/469 club_path values positive (R, in-to-out), 40 negative (L, out-to-in). Matches CSV source data.
+- No data migration needed — existing values are correct.
+- If the shot-shape chart still misinterprets swing path direction (shows "out-to-in" for positive values), the issue is in the frontend chart's sign/label convention, not the backend.
+- **Impact:** McManus should verify the shot-shape chart interprets positive club_path as "in-to-out" and negative as "out-to-in."
+
+---
+
+## Canonical Club Order Applied in Frontend Charts
+
+**Date:** 2026-03-25 | **Author:** McManus | **Status:** Implemented
+
+- `CANONICAL_CLUB_ORDER` array defined in `charts.js` with full wedge sub-swing coverage:
+  `1W, 3W, 2H, 3H, 4H, 3i, 4i, 5i, 6i, 7i, 8i, 9i, PW, PW-Full, AW, AW-Full, SW, SW-Full, LW, LW-Full, [3/3 group], [2/3 group], [1/3 group], [clock swings]`
+- `sortByCanonicalOrder(clubs)` utility sorts any club label array by this order; unknowns go to end alphabetically.
+- Applied client-side to: carry distribution (concentric arc), club comparison (boxplot), launch-spin stability (boxplot).
+- Backend already sorts carry-distribution by `CLUB_ORDER` (Decision 10), but frontend re-sorts for safety.
+- **Impact:** Any new chart consuming club-keyed data should call `sortByCanonicalOrder()` on its labels before rendering.
+
+---
+
+## Carry Distance Chart: Custom Canvas (Not Chart.js)
+
+**Date:** 2026-03-25 | **Author:** McManus | **Status:** Implemented
+
+- The carry distance visualization is now a custom HTML5 Canvas drawing, NOT a Chart.js instance.
+- Stored in `chartInstances['carry-distribution']` as `{destroy: function()}` for lifecycle compatibility.
+- `destroyChart()` also cleans up custom `mousemove` handlers on the canvas element.
+- **Pattern rule:** Any future custom Canvas chart must provide a `destroy()` method and be stored in `chartInstances` for cleanup on analytics reload.
+
+---
+
 ## Club-Comparison Endpoint Needs Box Plot + Sub-Swing Refactor (TODO 75)
 
 **Date:** 2026-03-26 | **Author:** Hockney | **Status:** Proposed

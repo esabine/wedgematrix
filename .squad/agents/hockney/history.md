@@ -425,6 +425,37 @@ TODO 76 (PGA Tour Averages): 8 tests — ALL PASS
 - Scatter data includes spin_rate, ball_speed, face_angle, launch_angle
 - Fields have reasonable numeric values
 - Missing fields → null, no crash
+
+### Batch 9 — TODOs 77–79 Test Suite Expansion
+
+**Scope:** 39 new tests (4 carry API + 13 club ordering + 22 swing path) → 282 total tests (279 passing)
+
+**Carry API (TODO 77): 4 Tests**
+- Concentric arc carry chart rendering verification
+- Custom Canvas lifecycle correctness
+- Canvas mousemove handler cleanup
+- Edge cases for carry distance extremes
+
+**Club Ordering (TODO 78): 13 Tests**
+- CLUB_ORDER constant (48 entries) validation
+- club_sort_key() function O(1) correctness
+- Sort loop application verification (app.py, analytics.py)
+- Compound wedge label ordering (swing type grouping: 3/3→2/3→1/3→clock)
+- Bare club names (carry-distribution, loft-summary)
+- Compound labels (club-comparison, launch-spin-stability)
+- Unknown club labels sort alphabetically to end
+
+**Swing Path Parsing (TODO 79): 22 Tests**
+- parse_direction() R→positive, L→negative correctness
+- Database audit: 401/469 positive, 40 negative values
+- Offline column parsing edge cases (spaces, NaN, missing)
+- No data migration needed (existing values correct)
+- Verification of swing path sign convention consistency
+
+**Results:**
+- 279/282 tests passing (3 pre-existing loft analysis failures unrelated to batch)
+- Full regression safety verified across all chart endpoints
+- All carry, club ordering, and swing path functionality tested
 - Empty dataset → empty scatter
 - **Finding:** Fenster already added tooltip fields to dispersion_data()
 
