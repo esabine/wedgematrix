@@ -180,27 +180,27 @@ function initCarryDistribution(data) {
     var ARC_START = Math.PI + (Math.PI - ARC_SPAN) / 2;
     var ARC_END = 2 * Math.PI - (Math.PI - ARC_SPAN) / 2;
 
-    // Color by club type
+    // Color by club type — saturated enough to read on white background
     function clubColor(club) {
         var base = club.split('-')[0];
-        if (/W$/.test(base)) return '#66bb6a';
-        if (/H$/.test(base)) return '#26c6da';
-        if (/i$/.test(base)) return '#42a5f5';
-        if (/^PW/.test(club)) return '#ffb74d';
-        if (/^AW/.test(club)) return '#ffa726';
-        if (/^SW/.test(club)) return '#ef5350';
-        if (/^LW/.test(club)) return '#ab47bc';
-        return '#9e9e9e';
+        if (/W$/.test(base)) return '#2d6a4f';  // Woods — golf green
+        if (/H$/.test(base)) return '#1b9e77';  // Hybrids — teal
+        if (/i$/.test(base)) return '#2171b5';  // Irons — blue
+        if (/^PW/.test(club)) return '#d95f02'; // PW — burnt orange
+        if (/^AW/.test(club)) return '#e6550d'; // AW — orange
+        if (/^SW/.test(club)) return '#d62728'; // SW — red
+        if (/^LW/.test(club)) return '#7b2d8e'; // LW — purple
+        return '#6c757d';                       // default — Bootstrap gray
     }
 
-    // === BACKGROUND ===
-    ctx.fillStyle = '#162b22';
+    // === BACKGROUND (light, matches Bootstrap card body) ===
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, totalWidth, height);
 
-    var bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxRadius * 1.3);
-    bgGrad.addColorStop(0, '#1e3d2f');
-    bgGrad.addColorStop(0.7, '#1a3328');
-    bgGrad.addColorStop(1, '#162b22');
+    // Subtle radial gradient to give depth to the arc area
+    var bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxRadius * 1.2);
+    bgGrad.addColorStop(0, '#f8faf9');
+    bgGrad.addColorStop(1, '#f0f4f2');
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, arcW, height);
 
@@ -209,14 +209,14 @@ function initCarryDistribution(data) {
     for (var d = 25; d <= scaleDist; d += 25) {
         var r = yardToR(d);
         var major = d % 50 === 0;
-        ctx.strokeStyle = major ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.08)';
+        ctx.strokeStyle = major ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.06)';
         ctx.lineWidth = major ? 0.8 : 0.5;
         ctx.beginPath();
         ctx.arc(cx, cy, r, ARC_START, ARC_END);
         ctx.stroke();
         if (major) {
             ctx.font = '9px "Segoe UI", sans-serif';
-            ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            ctx.fillStyle = 'rgba(0,0,0,0.35)';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
             ctx.fillText(d + ' yd', cx, cy - r - 3);
@@ -225,7 +225,7 @@ function initCarryDistribution(data) {
     ctx.setLineDash([]);
 
     // Center / target line
-    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
     ctx.lineWidth = 0.8;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
@@ -239,7 +239,7 @@ function initCarryDistribution(data) {
         var r1 = yardToR(clubData[gi].dist);
         var r2 = yardToR(clubData[gi + 1].dist);
         var fillColor = null;
-        if (g > 20) fillColor = 'rgba(220, 53, 69, 0.12)';
+        if (g > 20) fillColor = 'rgba(220, 53, 69, 0.08)';
         else if (g < 5) fillColor = 'rgba(255, 193, 7, 0.10)';
         if (fillColor) {
             ctx.fillStyle = fillColor;
@@ -263,11 +263,11 @@ function initCarryDistribution(data) {
     });
 
     // Golfer origin marker
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillStyle = '#2d6a4f';
     ctx.beginPath();
     ctx.arc(cx, cy, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.strokeStyle = 'rgba(45,106,79,0.3)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -275,15 +275,23 @@ function initCarryDistribution(data) {
     var legX = arcW + 8;
     var legTopY = 8;
 
+    // Vertical separator between arc area and legend
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(arcW, 0);
+    ctx.lineTo(arcW, height);
+    ctx.stroke();
+
     // Title
     ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillStyle = '#333';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText('Carry (' + pLabel + ')', legX, legTopY);
 
     // Divider
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     ctx.moveTo(legX, legTopY + 16);
@@ -309,14 +317,14 @@ function initCarryDistribution(data) {
 
         // Club name
         ctx.font = 'bold 10px "Segoe UI", Arial, sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillStyle = '#333';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
         ctx.fillText(cd.club, legX + 16, y + entryH / 2);
 
         // Distance (right-aligned)
         ctx.font = '10px "Segoe UI", Arial, sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillStyle = '#6c757d';
         ctx.textAlign = 'right';
         ctx.fillText(cd.dist + ' yd', legX + legendW - 16, y + entryH / 2);
 
@@ -324,8 +332,8 @@ function initCarryDistribution(data) {
         if (cd.gap !== null && cd.gap !== undefined && i < clubData.length - 1 && entryH >= 15) {
             var badgeColor = null;
             var warn = '';
-            if (cd.gap > 20) { badgeColor = 'rgba(220, 53, 69, 0.75)'; warn = '↕' + cd.gap; }
-            else if (cd.gap < 5) { badgeColor = 'rgba(255, 193, 7, 0.75)'; warn = '↕' + cd.gap; }
+            if (cd.gap > 20) { badgeColor = 'rgba(220, 53, 69, 0.85)'; warn = '↕' + cd.gap; }
+            else if (cd.gap < 5) { badgeColor = 'rgba(255, 193, 7, 0.85)'; warn = '↕' + cd.gap; }
             if (badgeColor) {
                 var midY = y + entryH;
                 ctx.font = '8px "Segoe UI", sans-serif';
