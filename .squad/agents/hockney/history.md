@@ -48,6 +48,7 @@ The wedgeMatrix test suite (pytest) validates CSV parsing, analytics math, API c
   - TODO 64-66 batch: +47 tests (dispersion boundary + geometry) → 180 total
   - TODO 67-70 batch: +26 tests (launch-spin + radar + gapping) → 206 total (3 pre-existing failures persist)
   - TODO 71-76 batch: +31 tests → 239 total (4 spec tests pending TODO 71 VERSION + TODO 75 box-plot refactor)
+  - TODO 77-79 batch: +39 tests → 282 total (3 pre-existing loft_analysis failures persist)
 
 ## Learnings
 
@@ -471,3 +472,51 @@ TODO 76 (PGA Tour Averages): 8 tests — ALL PASS
 - Decision for TODO 75 refactor posted in decisions.md
 
 **Key Finding:** The gapping fix (TODO 72) was frontend-only. Backend data was correct; frontend chart label calculation had off-by-one error. Spec tests for TODO 71 VERSION and TODO 75 box-whisker refactor document required follow-up work.
+
+### 2026-03-26 — Tests for TODO 77-79 (39 new tests, 282 total passing)
+
+**File Created:** tests/test_todo_77_79.py — 39 tests across 4 test classes
+
+**Test Coverage by TODO:**
+
+**TODO 77 (Carry Distance Chart Regression):** 4 tests (ALL PASS ✅)
+- Carry distribution returns per-club box-plot stats (min, q1, median, q3, max, count)
+- Keys are short codes (7i, PW) not long names (7 Iron, P-Wedge)
+- Empty session → empty dict, no crash
+- Gapping field present for adjacent clubs with correct sign
+
+**TODO 78 (Club Ordering):** 13 tests (ALL PASS ✅)
+- CLUB_ORDER constant exists, is a list of 14 clubs
+- Starts with 1W (Driver), ends with LW
+- Woods before irons, irons before wedges
+- Carry-distribution response keys follow CLUB_ORDER (seeded in reverse to prove sort)
+- Unknown clubs (not in CLUB_ORDER) appended at end
+- Missing clubs skipped gracefully (only present clubs in response)
+- Club-comparison response sorted by CLUB_ORDER
+- Launch-spin stability sorted by CLUB_ORDER (wedge sub-swings start with PW prefix)
+- Empty data → no crash on carry or comparison endpoints
+- Wedge-only sub-swing data still ordered correctly (PW before AW)
+
+**TODO 79 (Swing Path L/R Parsing):** 22 tests (ALL PASS ✅)
+- "L5.2" → -5.2 (out-to-in), "R3.1" → +3.1 (in-to-out)
+- "0" and "0.0" → 0.0 (straight)
+- Plain number "5.2" → 5.2 (no prefix)
+- Empty/None/NaN → None (no crash)
+- "L0" → 0 or -0 (both acceptable), "R0" → 0
+- Very large values (L99.9, R99.9) → correct sign
+- Negative number "-2.5" → -2.5
+- Whitespace stripped, garbage → None, bare "L"/"R" → None
+- CSV integration: club_path with L prefix parsed correctly in parse_shot_row
+- CSV integration: face_angle with R and L prefixes parsed correctly
+- Missing Club Path key → club_path = None
+
+**Key Findings:**
+- Launch-spin stability splits wedge clubs into sub-swings (e.g., PW-full), so ordering tests must search for key prefixes, not exact matches
+- The carry-distribution route in app.py explicitly sorts by CLUB_ORDER with unknown clubs appended at end — clean ordering contract
+- parse_direction() handles all L/R edge cases correctly including L0 → -0.0 (float), which is == 0.0
+
+**Score:**
+- **New Tests:** 39
+- **All Passing:** 39/39 (100%)
+- **Total Suite:** 282 passing, 3 failing (pre-existing loft_analysis failures)
+- **Pre-existing Failures:** 3 loft analysis tests (unchanged from previous batches)

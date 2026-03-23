@@ -348,3 +348,25 @@ Template: 	emplates/analytics/dispersion.html updated to include these fields in
 - Hockney (tester) confirmed all 31 new tests pass; charts render correctly with new data payloads.
 
 **Frontend Validation:** All templates parse without errors; Chart.js renders without console errors; dropdown controls respond to user input. Version footer visible on all pages.
+
+### 2026-03-25 — Concentric Arc Chart + Canonical Club Ordering (TODOs 77-78)
+
+**TODO 77 (Concentric Arc Carry Chart):** Replaced the bar chart carry-distance visualization with a custom HTML5 Canvas concentric arc chart. Design inspired by driving range distance markers:
+- Dark green radial gradient background (driving range aesthetic)
+- 170° semicircular arcs emanating from golfer origin at bottom center
+- Reference rings at 25yd/50yd intervals with distance labels
+- Color-coded arcs: woods (#66bb6a), hybrids (#26c6da), irons (#42a5f5), wedges (PW=#ffb74d, AW=#ffa726, SW=#ef5350, LW=#ab47bc)
+- Gap fills highlight problem spacing: red tint for >20yd gaps, amber for <5yd
+- Right-side legend sidebar with color swatches, club names, distances, and ⚠ gap badges
+- Hover tooltip shows club details + shot count
+- Custom `destroy()` method for compatibility with existing `chartInstances` cleanup pattern
+- HiDPI/Retina display support via `devicePixelRatio` scaling
+
+**TODO 78 (Canonical Club Ordering):** Added `CANONICAL_CLUB_ORDER` array and `sortByCanonicalOrder()` utility at top of charts.js:
+- Order: Woods → Hybrids → Irons → Full wedge shots → 3/3 → 2/3 → 1/3 → clock swings (10:2 through 8:4)
+- Includes both base names (PW, AW) and sub-swing labels (PW-Full, AW-3/3) so sorting works regardless of backend grouping
+- O(1) lookup via pre-built `_CLUB_ORDER_MAP` index
+- Applied to: carry distribution, club comparison, launch-spin-stability
+- Unknown clubs sort alphabetically at end
+
+**Key Pattern:** Custom Canvas charts store a `{destroy: function()}` object in `chartInstances` to stay compatible with the Chart.js cleanup lifecycle. The `destroyChart()` function also cleans up custom event handlers for the arc chart.
