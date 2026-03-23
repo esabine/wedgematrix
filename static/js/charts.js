@@ -63,15 +63,6 @@ function destroyChart(id) {
         chartInstances[id].destroy();
         delete chartInstances[id];
     }
-    // Clean up custom event handlers (concentric arc chart)
-    if (id === 'carry-distribution') {
-        var c = document.getElementById('chart-carry-distribution');
-        if (c && c._carryArcHandler) {
-            c.removeEventListener('mousemove', c._carryArcHandler);
-            c._carryArcHandler = null;
-            c.title = '';
-        }
-    }
 }
 
 /* ---------- Load All Analytics ---------- */
@@ -124,272 +115,141 @@ function buildQueryString(params) {
     return parts.length ? '?' + parts.join('&') : '';
 }
 
-/* ---------- Carry Distance — Concentric Arc Chart ---------- */
+/* ---------- Carry Distance Distribution (with Gapping) ---------- */
 function initCarryDistribution(data) {
     var canvas = document.getElementById('chart-carry-distribution');
     if (!canvas || !data || typeof data !== 'object') return;
     destroyChart('carry-distribution');
 
-    // Backend returns {club: {values, min, q1, median, q3, max, count, gap, percentile}}
-    var allClubs = Object.keys(data);
-    if (!allClubs.length) return;
-    var clubs = sortByCanonicalOrder(allClubs);
+    // Backend returns {club: {values, min, q1, median, q3, max, count, gap}}
+    var labels = sortByCanonicalOrder(Object.keys(data));
+    if (!labels.length) return;
 
-    var pLabel = data[clubs[0]] && data[clubs[0]].percentile
-        ? 'P' + data[clubs[0]].percentile : 'P75';
+    var medianData = labels.map(function (c) { return data[c].median || 0; });
+    var pLabel = data[labels[0]] && data[labels[0]].percentile ?
+                 'P' + data[labels[0]].percentile : 'P75';
+    var pData = labels.map(function (c) { return data[c].q3 || data[c].median || 0; });
 
-    // Build ordered data
-    var clubData = clubs.map(function (c) {
-        return {
-            club: c,
-            dist: Math.round(data[c].q3 || data[c].median || 0),
-            gap: data[c].gap,
-            count: data[c].count || 0,
-        };
-    });
+    // Compute gaps between adjacent clubs (longer club to shorter club)
+    var gaps = labels.map(function (c) { return data[c].gap != null ? data[c].gap : null; });
 
-    // Scale: round max distance up to nearest 50 + buffer
-    var maxDist = Math.max.apply(null, clubData.map(function (d) { return d.dist; }));
-    var scaleDist = Math.ceil(maxDist / 50) * 50 + 25;
-
-    // Canvas sizing — HiDPI aware
-    var container = canvas.parentElement;
-    var dpr = window.devicePixelRatio || 1;
-    var totalWidth = container.clientWidth || 500;
-    var legendW = Math.min(130, Math.max(100, totalWidth * 0.25));
-    var arcW = totalWidth - legendW;
-    var height = Math.max(300, Math.min(480, totalWidth * 0.6));
-
-    canvas.width = totalWidth * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = totalWidth + 'px';
-    canvas.style.height = height + 'px';
-
-    var ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-
-    // Geometry: golfer at bottom-center of arc area, arcs open upward
-    var cx = arcW / 2;
-    var cy = height - 18;
-    var maxRadius = Math.min(cy - 22, (arcW / 2) - 6);
-
-    function yardToR(yards) { return (yards / scaleDist) * maxRadius; }
-
-    // 170° arc span centered at 12-o'clock
-    var ARC_SPAN = 170 * Math.PI / 180;
-    var ARC_START = Math.PI + (Math.PI - ARC_SPAN) / 2;
-    var ARC_END = 2 * Math.PI - (Math.PI - ARC_SPAN) / 2;
-
-    // Color by club type — saturated enough to read on white background
-    function clubColor(club) {
-        var base = club.split('-')[0];
-        if (/W$/.test(base)) return '#2d6a4f';  // Woods — golf green
-        if (/H$/.test(base)) return '#1b9e77';  // Hybrids — teal
-        if (/i$/.test(base)) return '#2171b5';  // Irons — blue
-        if (/^PW/.test(club)) return '#d95f02'; // PW — burnt orange
-        if (/^AW/.test(club)) return '#e6550d'; // AW — orange
-        if (/^SW/.test(club)) return '#d62728'; // SW — red
-        if (/^LW/.test(club)) return '#7b2d8e'; // LW — purple
-        return '#6c757d';                       // default — Bootstrap gray
+    // Gap colors: red if >20yd, amber if <5yd, green otherwise
+    function gapColor(g) {
+        if (g === null || g === undefined) return 'transparent';
+        if (g > 20) return 'rgba(220, 53, 69, 0.85)';
+        if (g < 5) return 'rgba(255, 193, 7, 0.85)';
+        return 'rgba(45, 106, 79, 0.7)';
     }
 
-    // === BACKGROUND (light, matches Bootstrap card body) ===
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, totalWidth, height);
-
-    // Subtle radial gradient to give depth to the arc area
-    var bgGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxRadius * 1.2);
-    bgGrad.addColorStop(0, '#f8faf9');
-    bgGrad.addColorStop(1, '#f0f4f2');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, arcW, height);
-
-    // === DISTANCE REFERENCE RINGS ===
-    ctx.setLineDash([3, 5]);
-    for (var d = 25; d <= scaleDist; d += 25) {
-        var r = yardToR(d);
-        var major = d % 50 === 0;
-        ctx.strokeStyle = major ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.06)';
-        ctx.lineWidth = major ? 0.8 : 0.5;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, ARC_START, ARC_END);
-        ctx.stroke();
-        if (major) {
-            ctx.font = '9px "Segoe UI", sans-serif';
-            ctx.fillStyle = 'rgba(0,0,0,0.35)';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText(d + ' yd', cx, cy - r - 3);
-        }
-    }
-    ctx.setLineDash([]);
-
-    // Center / target line
-    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx, cy - maxRadius - 10);
-    ctx.stroke();
-
-    // === GAP FILLS for problem gaps ===
-    for (var gi = 0; gi < clubData.length - 1; gi++) {
-        var g = clubData[gi].gap;
-        if (g === null || g === undefined) continue;
-        var r1 = yardToR(clubData[gi].dist);
-        var r2 = yardToR(clubData[gi + 1].dist);
-        var fillColor = null;
-        if (g > 20) fillColor = 'rgba(220, 53, 69, 0.08)';
-        else if (g < 5) fillColor = 'rgba(255, 193, 7, 0.10)';
-        if (fillColor) {
-            ctx.fillStyle = fillColor;
-            ctx.beginPath();
-            ctx.arc(cx, cy, r1, ARC_START, ARC_END, false);
-            ctx.arc(cx, cy, r2, ARC_END, ARC_START, true);
-            ctx.closePath();
-            ctx.fill();
-        }
+    function gapBorderColor(g) {
+        if (g === null || g === undefined) return 'transparent';
+        if (g > 20) return 'rgba(220, 53, 69, 1)';
+        if (g < 5) return 'rgba(255, 193, 7, 1)';
+        return 'rgba(45, 106, 79, 1)';
     }
 
-    // === CLUB ARCS (draw longest first so shorter arcs layer on top) ===
-    var sortedByDist = clubData.slice().sort(function (a, b) { return b.dist - a.dist; });
-    sortedByDist.forEach(function (cd) {
-        var r = yardToR(cd.dist);
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, ARC_START, ARC_END);
-        ctx.strokeStyle = clubColor(cd.club);
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-    });
-
-    // Golfer origin marker
-    ctx.fillStyle = '#2d6a4f';
-    ctx.beginPath();
-    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(45,106,79,0.3)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // === LEGEND (right sidebar) ===
-    var legX = arcW + 8;
-    var legTopY = 8;
-
-    // Vertical separator between arc area and legend
-    ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(arcW, 0);
-    ctx.lineTo(arcW, height);
-    ctx.stroke();
-
-    // Title
-    ctx.font = 'bold 11px "Segoe UI", Arial, sans-serif';
-    ctx.fillStyle = '#333';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText('Carry (' + pLabel + ')', legX, legTopY);
-
-    // Divider
-    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-    ctx.lineWidth = 0.5;
-    ctx.beginPath();
-    ctx.moveTo(legX, legTopY + 16);
-    ctx.lineTo(legX + legendW - 16, legTopY + 16);
-    ctx.stroke();
-
-    // Entries — compute spacing to fit all clubs
-    var availH = height - legTopY - 30;
-    var entryH = Math.min(20, Math.max(13, availH / clubData.length));
-    var startY = legTopY + 22;
-
-    clubData.forEach(function (cd, i) {
-        var y = startY + i * entryH;
-        var col = clubColor(cd.club);
-
-        // Color swatch (thick line)
-        ctx.strokeStyle = col;
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(legX, y + entryH / 2);
-        ctx.lineTo(legX + 12, y + entryH / 2);
-        ctx.stroke();
-
-        // Club name
-        ctx.font = 'bold 10px "Segoe UI", Arial, sans-serif';
-        ctx.fillStyle = '#333';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(cd.club, legX + 16, y + entryH / 2);
-
-        // Distance (right-aligned)
-        ctx.font = '10px "Segoe UI", Arial, sans-serif';
-        ctx.fillStyle = '#6c757d';
-        ctx.textAlign = 'right';
-        ctx.fillText(cd.dist + ' yd', legX + legendW - 16, y + entryH / 2);
-
-        // Gap badge for problem gaps (only show ⚠ if gap is concerning)
-        if (cd.gap !== null && cd.gap !== undefined && i < clubData.length - 1 && entryH >= 15) {
-            var badgeColor = null;
-            var warn = '';
-            if (cd.gap > 20) { badgeColor = 'rgba(220, 53, 69, 0.85)'; warn = '↕' + cd.gap; }
-            else if (cd.gap < 5) { badgeColor = 'rgba(255, 193, 7, 0.85)'; warn = '↕' + cd.gap; }
-            if (badgeColor) {
-                var midY = y + entryH;
-                ctx.font = '8px "Segoe UI", sans-serif';
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
-                var tw = ctx.measureText(warn).width + 6;
-                ctx.fillStyle = badgeColor;
-                ctx.beginPath();
-                ctx.roundRect(legX + 16, midY - 5, tw, 10, 3);
-                ctx.fill();
-                ctx.fillStyle = '#fff';
-                ctx.fillText(warn, legX + 19, midY);
-            }
-        }
-    });
-
-    // Store cleanup reference (custom canvas, not Chart.js)
-    chartInstances['carry-distribution'] = {
-        destroy: function () {
-            var c = canvas.getContext('2d');
-            c.setTransform(1, 0, 0, 1, 0, 0);
-            c.clearRect(0, 0, canvas.width, canvas.height);
-            canvas.style.width = '';
-            canvas.style.height = '';
+    chartInstances['carry-distribution'] = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Carry (' + pLabel + ')',
+                    data: pData,
+                    backgroundColor: labels.map(function (_, i) {
+                        return CLUB_PALETTE[i % CLUB_PALETTE.length];
+                    }),
+                    borderColor: 'rgba(45, 106, 79, 1)',
+                    borderWidth: 1,
+                    order: 1,
+                },
+            ],
         },
-    };
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function (ctx) {
+                            var idx = ctx.dataIndex;
+                            var lines = [];
+                            // Gap to shorter club (stored on this club)
+                            if (gaps[idx] != null) {
+                                var gNext = gaps[idx];
+                                var warn = gNext > 20 ? ' \u26a0 too large' : (gNext < 5 ? ' \u26a0 too small' : '');
+                                lines.push('Gap to next club: ' + gNext + 'yd' + warn);
+                            }
+                            // Gap from longer club (stored on previous club)
+                            if (idx > 0 && gaps[idx - 1] != null) {
+                                var gPrev = gaps[idx - 1];
+                                var warn2 = gPrev > 20 ? ' \u26a0 too large' : (gPrev < 5 ? ' \u26a0 too small' : '');
+                                lines.push('Gap from prev club: ' + gPrev + 'yd' + warn2);
+                            }
+                            return lines.join('\n');
+                        },
+                    },
+                },
+            },
+            scales: {
+                x: { title: { display: true, text: 'Club' } },
+                y: { title: { display: true, text: 'Carry (yards)' }, beginAtZero: false,
+                     grace: '15%' },
+            },
+            layout: { padding: { top: 10 } },
+        },
+        plugins: [{
+            id: 'gapAnnotations',
+            afterDraw: function (chart) {
+                var ctx = chart.ctx;
+                var meta = chart.getDatasetMeta(0);
+                ctx.save();
+                ctx.font = 'bold 10px "Segoe UI", Arial, sans-serif';
+                ctx.textAlign = 'center';
 
-    // Tooltip on hover — show club details near mouse
-    canvas._carryArcHandler = function (e) {
-        var rect = canvas.getBoundingClientRect();
-        var mx = e.clientX - rect.left;
-        var my = e.clientY - rect.top;
-        // Check if within arc area
-        if (mx > arcW) return;
-        var dx = mx - cx;
-        var dy = my - cy;
-        var mouseR = Math.sqrt(dx * dx + dy * dy);
-        var mouseYards = (mouseR / maxRadius) * scaleDist;
-        // Find closest club
-        var closest = null;
-        var closestDelta = Infinity;
-        clubData.forEach(function (cd) {
-            var delta = Math.abs(mouseYards - cd.dist);
-            if (delta < closestDelta) {
-                closestDelta = delta;
-                closest = cd;
-            }
-        });
-        if (closest && closestDelta < scaleDist * 0.04) {
-            canvas.title = closest.club + ': ' + closest.dist + ' yd (' + closest.count + ' shots)' +
-                (closest.gap != null ? ' | Gap: ' + closest.gap + 'yd' : '');
-        } else {
-            canvas.title = '';
-        }
-    };
-    canvas.addEventListener('mousemove', canvas._carryArcHandler);
+                for (var i = 1; i < gaps.length; i++) {
+                    var g = gaps[i - 1];
+                    if (g === null || g === undefined) continue;
+
+                    var bar = meta.data[i];
+                    var prevBar = meta.data[i - 1];
+                    if (!bar || !prevBar) continue;
+
+                    // Position badge centered between the two bars it connects
+                    var midX = (prevBar.x + bar.x) / 2;
+                    var higherY = Math.min(prevBar.y, bar.y);
+                    var badgeY = higherY - 22;
+                    var text = g + 'yd';
+                    var tw = ctx.measureText(text).width + 10;
+                    var badgeH = 16;
+                    var badgeR = 8;
+
+                    // Badge pill background
+                    ctx.fillStyle = gapColor(g);
+                    ctx.beginPath();
+                    ctx.roundRect(midX - tw / 2, badgeY - badgeH / 2, tw, badgeH, badgeR);
+                    ctx.fill();
+
+                    // Badge text
+                    ctx.fillStyle = '#fff';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(text, midX, badgeY);
+
+                    // Bracket: thin lines from badge down to each bar top
+                    ctx.strokeStyle = gapBorderColor(g);
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([]);
+                    ctx.beginPath();
+                    ctx.moveTo(midX - tw / 2 + 4, badgeY + badgeH / 2);
+                    ctx.lineTo(prevBar.x, prevBar.y - 2);
+                    ctx.moveTo(midX + tw / 2 - 4, badgeY + badgeH / 2);
+                    ctx.lineTo(bar.x, bar.y - 2);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            },
+        }],
+    });
 }
 
 /* ---------- Dispersion Pattern ---------- */
@@ -418,6 +278,81 @@ var dispersionTargetLine = {
         ctx.font = '10px sans-serif';
         ctx.textAlign = 'left';
         ctx.fillText('Target', xPixel + 4, chart.scales.y.top + 12);
+        ctx.restore();
+    },
+};
+
+// Plugin: concentric distance arcs (driving-range rings) behind scatter dots
+var dispersionConcentricArcs = {
+    id: 'dispersionConcentricArcs',
+    beforeDatasetsDraw: function (chart) {
+        var xScale = chart.scales.x;
+        var yScale = chart.scales.y;
+        if (!xScale || !yScale) return;
+
+        var ctx = chart.ctx;
+        var area = chart.chartArea;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(area.left, area.top, area.right - area.left, area.bottom - area.top);
+        ctx.clip();
+
+        // Choose arc interval based on y-axis range
+        var yMax = yScale.max;
+        var step = 50;
+        if (yMax > 500) step = 100;
+        else if (yMax < 80) step = 25;
+
+        // Golfer origin in pixel space: offline=0, carry=0
+        var originPx = xScale.getPixelForValue(0);
+        var originPy = yScale.getPixelForValue(0);
+
+        var xMin = xScale.min;
+        var xMax = xScale.max;
+        var arcSteps = 120;
+
+        ctx.setLineDash([3, 4]);
+        ctx.lineWidth = 0.8;
+
+        for (var carry = step; carry <= yMax + step; carry += step) {
+            // Arc: all points at distance `carry` from golfer (0,0)
+            // carry_at_x = sqrt(carry² - x²)
+            ctx.strokeStyle = 'rgba(45, 106, 79, 0.18)';
+            ctx.beginPath();
+            var started = false;
+
+            for (var s = 0; s <= arcSteps; s++) {
+                var x = xMin + (xMax - xMin) * (s / arcSteps);
+                var rSq = carry * carry - x * x;
+                if (rSq < 0) continue;
+                var y = Math.sqrt(rSq);
+                if (y < yScale.min || y > yScale.max * 1.05) continue;
+
+                var px = xScale.getPixelForValue(x);
+                var py = yScale.getPixelForValue(y);
+
+                if (!started) { ctx.moveTo(px, py); started = true; }
+                else { ctx.lineTo(px, py); }
+            }
+            if (started) ctx.stroke();
+
+            // Distance label at center of arc
+            var labelY = Math.min(carry, yScale.max);
+            if (labelY > yScale.min + 5) {
+                var labelPx = xScale.getPixelForValue(0);
+                var labelPy = yScale.getPixelForValue(labelY);
+                if (labelPy > area.top + 10 && labelPy < area.bottom - 10) {
+                    ctx.setLineDash([]);
+                    ctx.font = '9px "Segoe UI", sans-serif';
+                    ctx.fillStyle = 'rgba(45, 106, 79, 0.4)';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(carry + ' yd', labelPx, labelPy - 3);
+                    ctx.setLineDash([3, 4]);
+                }
+            }
+        }
+
         ctx.restore();
     },
 };
@@ -546,10 +481,11 @@ function initDispersionChart(data) {
                 y: {
                     title: { display: true, text: 'Carry (yards)' },
                     min: 0,
+                    grid: { display: false },
                 },
             },
         },
-        plugins: [dispersionTargetLine],
+        plugins: [dispersionConcentricArcs, dispersionTargetLine],
     });
 }
 
