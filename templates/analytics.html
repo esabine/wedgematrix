@@ -200,6 +200,32 @@
         </p>
     </div>
 </div>
+
+<!-- PGA Tour Average Reference -->
+<div class="card border-0 shadow-sm mt-4 mb-3">
+    <div class="card-header bg-white">
+        <h6 class="mb-0"><i class="bi bi-trophy"></i> PGA Tour Average Reference</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover mb-0">
+                <thead class="table-golf">
+                    <tr>
+                        <th>Club</th>
+                        <th>Carry (yds)</th>
+                        <th>Spin Rate (rpm)</th>
+                        <th>Launch Angle (°)</th>
+                        <th>Ball Speed (mph)</th>
+                        <th>Dispersion (yds)</th>
+                    </tr>
+                </thead>
+                <tbody id="pga-averages-body">
+                    <tr><td colspan="6" class="text-center text-muted py-3"><i class="bi bi-hourglass-split"></i> Loading PGA Tour data…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -319,6 +345,7 @@
 
         {% if has_data %}
         loadAnalytics();
+        loadPGAAverages();
         {% endif %}
     });
 </script>

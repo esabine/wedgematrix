@@ -46,6 +46,13 @@ var CANONICAL_CLUB_ORDER = [
 var _CLUB_ORDER_MAP = {};
 CANONICAL_CLUB_ORDER.forEach(function (c, i) { _CLUB_ORDER_MAP[c] = i; });
 
+// Return a consistent color for a club name across ALL charts
+function getClubColor(club) {
+    var idx = _CLUB_ORDER_MAP[club];
+    if (idx === undefined) idx = CANONICAL_CLUB_ORDER.length;
+    return CLUB_PALETTE[idx % CLUB_PALETTE.length];
+}
+
 function sortByCanonicalOrder(clubs) {
     return clubs.slice().sort(function (a, b) {
         var posA = _CLUB_ORDER_MAP[a] !== undefined ? _CLUB_ORDER_MAP[a] : 9999;
@@ -156,8 +163,8 @@ function initCarryDistribution(data) {
                 {
                     label: 'Carry (' + pLabel + ')',
                     data: pData,
-                    backgroundColor: labels.map(function (_, i) {
-                        return CLUB_PALETTE[i % CLUB_PALETTE.length];
+                    backgroundColor: labels.map(function (c) {
+                        return getClubColor(c);
                     }),
                     borderColor: 'rgba(45, 106, 79, 1)',
                     borderWidth: 1,
@@ -383,8 +390,16 @@ function initDispersionChart(data) {
     });
 
     var clubNames = Object.keys(clubMap);
+    // Symmetric x-axis: find max absolute offline value
+    var maxAbsOffline = 0;
+    items.forEach(function (d) {
+        var abs = Math.abs(d.offline || 0);
+        if (abs > maxAbsOffline) maxAbsOffline = abs;
+    });
+    var offlineLimit = Math.ceil(maxAbsOffline * 1.1) || 10;
+
     var datasets = clubNames.map(function (club, i) {
-        var color = CLUB_PALETTE[i % CLUB_PALETTE.length];
+        var color = getClubColor(club);
         clubColorMap[club] = color;
         return {
             label: club,
@@ -475,7 +490,9 @@ function initDispersionChart(data) {
             },
             scales: {
                 x: {
-                    title: { display: true, text: 'Offline (yards) \u2190 Left | Right \u2192' },
+                    title: { display: true, text: ['\u2190 Left | Right \u2192', 'Offline (Yards)'] },
+                    min: -offlineLimit,
+                    max: offlineLimit,
                     grid: { color: 'rgba(0,0,0,0.05)' },
                 },
                 y: {
@@ -505,11 +522,11 @@ function initSpinChart(data) {
         clubMap[club].push({ x: d.roll, y: d.spin_rate });
     });
 
-    var datasets = Object.keys(clubMap).map(function (club, i) {
+    var datasets = Object.keys(clubMap).map(function (club) {
         return {
             label: club,
             data: clubMap[club],
-            backgroundColor: CLUB_PALETTE[i % CLUB_PALETTE.length],
+            backgroundColor: getClubColor(club),
             pointRadius: 4,
             pointHoverRadius: 6,
         };
@@ -549,32 +566,38 @@ function initShotShape(data) {
     var items = Array.isArray(data) ? data : [];
     if (!items.length) return;
 
-    var points = items.map(function (d) {
-        return { x: d.club_path, y: d.face_angle };
+    // Group shots by club for per-club datasets and colored tooltips
+    var clubMap = {};
+    items.forEach(function (d) {
+        var club = d.club || d.club_short || 'Unknown';
+        if (!clubMap[club]) clubMap[club] = [];
+        clubMap[club].push({ x: d.club_path, y: d.face_angle });
+    });
+
+    var datasets = Object.keys(clubMap).map(function (club) {
+        return {
+            label: club,
+            data: clubMap[club],
+            backgroundColor: getClubColor(club),
+            pointRadius: 5,
+            pointHoverRadius: 7,
+        };
     });
 
     chartInstances['shot-shape'] = new Chart(canvas, {
         type: 'scatter',
-        data: {
-            datasets: [{
-                label: 'Shots',
-                data: points,
-                backgroundColor: GOLF_COLORS.green,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-            }],
-        },
+        data: { datasets: datasets },
         options: {
             responsive: true,
             plugins: {
-                legend: { display: false },
+                legend: { position: 'right' },
                 tooltip: {
                     callbacks: {
                         label: function (ctx) {
                             var diff = ctx.parsed.y - ctx.parsed.x;
                             var shape = diff > 1 ? 'Fade/Slice' :
                                         diff < -1 ? 'Draw/Hook' : 'Straight';
-                            return 'Path: ' + ctx.parsed.x + '\u00b0, Face: ' +
+                            return ctx.dataset.label + ': Path ' + ctx.parsed.x + '\u00b0, Face ' +
                                    ctx.parsed.y + '\u00b0 \u2192 ' + shape;
                         },
                     },
@@ -939,4 +962,32 @@ function initRadarComparison(data) {
     }
 
     renderRadar('all');
+}
+
+/* ---------- PGA Tour Average Reference Table ---------- */
+function loadPGAAverages() {
+    var tbody = document.getElementById('pga-averages-body');
+    if (!tbody) return;
+
+    fetch('/api/analytics/pga-averages')
+        .then(handleResponse)
+        .then(function (data) {
+            if (!data || !data.clubs || !data.clubs.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No PGA Tour data available</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.clubs.map(function (c) {
+                return '<tr>' +
+                    '<td class="fw-semibold">' + (c.club || '') + '</td>' +
+                    '<td>' + (c.carry != null ? c.carry : '–') + '</td>' +
+                    '<td>' + (c.spin_rate != null ? c.spin_rate.toLocaleString() : '–') + '</td>' +
+                    '<td>' + (c.launch_angle != null ? c.launch_angle : '–') + '</td>' +
+                    '<td>' + (c.ball_speed != null ? c.ball_speed : '–') + '</td>' +
+                    '<td>' + (c.dispersion != null ? c.dispersion : '–') + '</td>' +
+                    '</tr>';
+            }).join('');
+        })
+        .catch(function () {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Failed to load PGA Tour data</td></tr>';
+        });
 }
