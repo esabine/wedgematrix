@@ -77,6 +77,13 @@ The wedgeMatrix backend is a Flask app (Python 3.11+, SQLite/SQLAlchemy) with mo
 - **Filter auto-navigate:** All shots page filters (session, swing_size, club, date_range, per_page) auto-navigate on change — no manual "Filter" button. `navigateWithFilters(page)` builds URL from current filter state.
 - **app.js guard:** `initClubToggleButtons()` now skips when shots page uses server-side pagination (detected by `shots-date-range-group` element presence).
 
+### 2026-03-25 — Version Automation + PGA Averages Module-Level Extract
+- **Version system:** `bump_version.py` script auto-increments version to 0.6.0. Integrated with `.githooks/pre-commit` for automatic bumping on each commit.
+- **PGA_AVERAGES extraction:** `PGA_AVERAGES` dict and `DEFAULT_PGA` moved from inside `radar_comparison()` to module-level in `services/analytics.py`. Enables code reuse across multiple endpoints without duplication.
+- **PGA averages endpoint:** New route `/api/analytics/pga-averages` shares the same `PGA_AVERAGES` dict. Static route registered **before** wildcard `/<chart_type>` to ensure Flask routing priority.
+- **API contract:** Returns dict `{club: {Carry, Spin Rate, Launch Angle, Ball Speed}}` for all 14 clubs (1W through LW). Values are baseline PGA averages on 0-150 scale (100 = PGA level).
+- **Impact:** Future endpoints needing PGA reference data should import from `services.analytics` instead of redefining.
+
 ### 2026-03-19 — Outlier Detection API + Hidden Shots + Print Percentile
 - **Outlier detection API:** New `GET /api/shots/suggested-exclusions` endpoint. `detect_outliers()` in analytics.py uses IQR method (Q1 − 1.5×IQR, Q3 + 1.5×IQR) on carry distance and offline (direction) per club. Needs ≥4 shots per club per metric. Returns `{outliers: {club: [{shot_id, reasons, carry, offline, carry_bounds, direction_bounds}]}, total_count, iqr_multiplier}`. Accepts `session_id`, `club` (comma-sep), `date_range`, `iqr_multiplier` params. Outliers sorted by CLUB_ORDER.
 - **Hidden shots backend:** Shots route now accepts `include_hidden` query param (default `false`). When false, filters out `excluded=True` shots before pagination. Returns `hidden_count` (count of excluded shots matching current filters) so frontend can show badge. When `include_hidden=true`, all shots returned with their `excluded` flag visible.
@@ -320,3 +327,19 @@ Paired with Hockney's 27 correctness, edge case, integration, and regression tes
 - If the shot-shape chart still shows incorrect in-to-out vs out-to-in interpretation, the issue is in the frontend chart's sign convention — the backend data is correct.
 
 **Test Score:** 282/285 passing. Same 3 pre-existing loft_analysis failures.
+
+### 2026-03-25 — TODOs 80-81: Version Auto-Increment + PGA Averages API
+
+**TODO 80 (Version Auto-Increment):**
+- Bumped VERSION from 0.5.0 → 0.6.0 for new feature batch.
+- Created `bump_version.py` — standalone script that reads/writes the VERSION line in app.py. Supports `patch`, `minor`, `major` args.
+- Created `.githooks/pre-commit` hook that calls `bump_version.py patch` and stages app.py. Activate with `git config core.hooksPath .githooks`.
+- Added comment on the VERSION line explaining the auto-increment mechanism.
+
+**TODO 81 (PGA Tour Averages API):**
+- Extracted `PGA_AVERAGES` and `DEFAULT_PGA` from inside `radar_comparison()` to module-level in `services/analytics.py` so both the radar endpoint and the new API can share the data.
+- New endpoint: `GET /api/analytics/pga-averages` returns `{clubs: [{club, carry, spin_rate, launch_angle, ball_speed, dispersion}, ...]}` sorted by CLUB_ORDER.
+- Registered BEFORE the `<chart_type>` catch-all route so Flask matches it as a static path first.
+- Response includes all 14 clubs (1W through LW) in canonical order.
+
+**Test Score:** 282/285 passing. Same 3 pre-existing loft_analysis failures. No regressions.

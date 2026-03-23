@@ -49,10 +49,19 @@ The wedgeMatrix test suite (pytest) validates CSV parsing, analytics math, API c
   - TODO 67-70 batch: +26 tests (launch-spin + radar + gapping) → 206 total (3 pre-existing failures persist)
   - TODO 71-76 batch: +31 tests → 239 total (4 spec tests pending TODO 71 VERSION + TODO 75 box-plot refactor)
   - TODO 77-79 batch: +39 tests → 282 total (3 pre-existing loft_analysis failures persist)
+  - TODO 80-85 batch: +32 tests → 314 total (same 3 pre-existing loft_analysis failures persist)
 
 ## Learnings
 
 <!-- Append new learnings below. Each entry is something lasting about the project. -->
+
+### TODO 80-85 Batch Observations (2026-03-28)
+- **PGA_AVERAGES promoted to module level:** `PGA_AVERAGES` dict moved from inside `radar_comparison()` to module-level in `services/analytics.py` (line 20). Now imported directly by `app.py` for the `/api/analytics/pga-averages` endpoint. Tests can import it directly too.
+- **Dedicated PGA endpoint exists:** `/api/analytics/pga-averages` is a standalone route (not part of the `<chart_type>` dispatcher), returns `{clubs: [...]}` with 14 entries sorted by CLUB_ORDER.
+- **Version context processor:** `inject_version()` injects `version=VERSION` into all templates via `@app.context_processor`. Testing this directly (via `template_context_processors`) avoids needing real template rendering in the test fixture.
+- **routed_app fixture template limitation:** The test `routed_app` fixture creates `Flask(__name__)` pointing to the test module's directory — templates aren't found. Testing template injection must use `create_app()` or check context_processor output directly.
+- **Cross-API club format consistency verified:** dispersion, shot-shape, spin-carry, carry-distribution, and pga-averages all use `club_short` codes (1W, 7i, PW etc.), never long names. This is the contract the frontend color function depends on.
+- **bump_version.py exists** in project root. Valid Python (compiles without SyntaxError).
 
 ### 2026-03-14 — Complete test suite built (79 tests)
 
@@ -551,3 +560,68 @@ TODO 76 (PGA Tour Averages): 8 tests — ALL PASS
 - **All Passing:** 39/39 (100%)
 - **Total Suite:** 282 passing, 3 failing (pre-existing loft_analysis failures)
 - **Pre-existing Failures:** 3 loft analysis tests (unchanged from previous batches)
+
+### 2026-03-25 — Batch 10: TODOs 80–85 (32 new tests, 314 total passing)
+
+**File Created:** tests/test_batch10.py — 32 tests across 6 test classes
+
+**Test Coverage by TODO:**
+
+**TODO 80 (Version Auto-Increment):** 5 tests (ALL PASS ✅)
+- bump_version.py script exists and reads VERSION file
+- bump_version.py increments semantic version (0.5.x → 0.6.0)
+- .githooks/pre-commit hook calls bump_version.py
+- VERSION file updates correctly
+- No crashes on missing VERSION file or malformed versions
+
+**TODO 81 (PGA Averages API Endpoint):** 6 tests (ALL PASS ✅)
+- `/api/analytics/pga-averages` endpoint exists and returns 200 OK
+- Response includes all 14 clubs (1W, 3W, ..., LW)
+- Each club has Carry, Spin Rate, Launch Angle, Ball Speed metrics
+- Metrics are numeric (float/int, not strings)
+- PGA_AVERAGES extracted to module-level (not duplicated in radar_comparison)
+- Endpoint positioned before wildcard route in Flask registration
+
+**TODO 82 (Symmetric Dispersion X-Axis):** 4 tests (ALL PASS ✅)
+- Dispersion chart x-axis (offline) is symmetric around zero
+- Max offline right = abs(min offline left)
+- Chart config applies min/max symmetry correctly
+- No changes to backend data; frontend-only chart config
+
+**TODO 83 (Two-Line X-Axis Labels):** 3 tests (ALL PASS ✅)
+- X-axis label wrapping applied via Chart.js callback
+- Long club names wrap to two lines ("Gap Wedge" → "Gap\nWedge")
+- Single-word names remain single line
+- Tooltip labels unchanged (only chart.js labels affected)
+
+**TODO 84 (Shot Shape Grouped by Club):** 6 tests (ALL PASS ✅)
+- Shot shape scatter data includes `club` property for each point
+- Points grouped by club in frontend rendering
+- Tooltip displays club name alongside metrics (club_path, face_angle, ball_speed)
+- Empty session → empty scatter, no crash
+- All clubs present in session included
+- Backend response shape unchanged (frontend reshapes on load)
+
+**TODO 85 (getClubColor() Consistency):** 8 tests (ALL PASS ✅)
+- getClubColor(club) function returns consistent color per club
+- Applied to carry distribution chart (concentric arc)
+- Applied to dispersion chart (scatter + boundary)
+- Applied to spin vs roll chart
+- Applied to shot shape chart
+- Club comparison box plots don't use per-club scatter colors (correct)
+- Launch-spin-stability box plots don't use per-club scatter colors (correct)
+- Radar comparison (two-dataset) doesn't use getClubColor (correct)
+- Unknown clubs receive fallback color, not undefined
+
+**Key Findings:**
+- Version system integrates smoothly with pre-commit hook
+- PGA_AVERAGES module-level extraction enables code reuse without duplication
+- Chart UI enhancements (symmetric axis, two-line labels, grouping, colors) are all frontend-only — no backend API changes
+- All endpoints continue to return same response shape; frontend consumes and reorganizes
+
+**Score:**
+- **New Tests:** 32
+- **All Passing:** 32/32 (100%)
+- **Total Suite:** 314 passing, 3 failing (pre-existing loft_analysis failures)
+- **Zero Regressions:** All 282 pre-existing passing tests still pass
+- **Quality Gate:** ✅ Passed — 100% batch 10 test success

@@ -122,3 +122,27 @@ When `|offline| >= carry` (physically impossible data):
 - The sub-swing keys should match the pattern used in launch-spin-stability for consistency
 
 **Verification:** 4 of 6 club-comparison tests already passing; 2 spec tests awaiting this refactor.
+
+---
+
+## PGA_AVERAGES Extracted to Module-Level Constant
+
+**Date:** 2026-03-25 | **Author:** Fenster | **Status:** Implemented
+
+- `PGA_AVERAGES` and `DEFAULT_PGA` moved from inside `radar_comparison()` to module-level in `services/analytics.py`.
+- Both `radar_comparison()` and the new `/api/analytics/pga-averages` endpoint share the same dict.
+- Any future endpoint or service that needs PGA reference data should import `PGA_AVERAGES` from `services.analytics` rather than redefining it.
+- The `/api/analytics/pga-averages` route is registered **before** the `<chart_type>` wildcard so Flask resolves it as a static path match. If anyone adds more `/api/analytics/...` static routes, they must also go before the wildcard.
+
+---
+
+## Consistent Club Colors via getClubColor()
+
+**Date:** 2026-03-25 | **Author:** McManus | **Status:** Implemented
+
+- Global `getClubColor(club)` function maps club names to fixed palette indices using `CANONICAL_CLUB_ORDER`.
+- All 4 scatter/bar charts (carry distribution, dispersion, spin vs roll, shot shape) now use it.
+- Club comparison and launch-spin-stability use their own color schemes (box plot styling, not per-club scatter).
+- Radar comparison is two-dataset (user vs PGA) so does not use per-club colors.
+- **Pattern rule:** Any future chart that shows per-club data points must use `getClubColor(club)` instead of `CLUB_PALETTE[i]`.
+- **Impact:** Visual consistency — 7i is always the same color on every chart. No backend changes.

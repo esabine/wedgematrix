@@ -325,7 +325,34 @@ Rewrote `initClubComparison()` from grouped bar chart to `type: 'boxplot'` using
 Added `<select id="radar-club-select">` to the card header. `initRadarComparison()` populates dropdown from `data.clubs_used`, defaults to "All Clubs". `select.onchange` calls inner `renderRadar(clubKey)` which destroys and recreates the chart with the selected club's `per_club` data.
 
 **Lesson:** When a chart needs a control (dropdown, toggle), wire it inside the init function so the data closure is available without globals. Destroy-and-recreate is simpler than `chart.update()` for radar type changes.
-### 2026-03-22 — Batch 8 Completion (TODOs 71-76 Frontend Charts & UI)
+### 2026-03-25 — TODOs 82–85: UI Polish, Symmetric Axes, Consistent Colors
+
+**TODO 82 — Symmetric Dispersion X-Axis:**
+- Dispersion chart x-axis (offline) now equidistant from zero: `min: -max_offline, max: +max_offline`
+- Ensures visual parity — left/right miss distances mirror geometrically
+- No backend changes; chart config only
+
+**TODO 83 — Two-Line X-Axis Labels:**
+- X-axis labels on dispersion chart now wrap across two lines for improved readability
+- Applied via Chart.js `ticks: { callback: wrapLabel }` plugin
+- Particularly helps longer club names (e.g., "Gap Wedge" wraps as "Gap\nWedge")
+- No backend changes
+
+**TODO 84 — Shot Shape Chart: Club Grouping + Tooltips:**
+- Shot shape scatter chart data reorganized: grouped by club before rendering
+- Each scatter point now includes `club` in its data object
+- Tooltip displays club name alongside existing flight metrics (club_path, face_angle, ball_speed)
+- Frontend changes only — backend `/api/analytics/shot-shape` unchanged
+
+**TODO 85 — getClubColor() for Consistent Colors:**
+- New global function `getClubColor(club)` maps club names to fixed palette indices via `CANONICAL_CLUB_ORDER`
+- Applied to all 4 per-club scatter/bar charts: carry distribution, dispersion, spin vs roll, shot shape
+- Club comparison and launch-spin-stability use their own styling (box plots, no per-club scatter)
+- Radar comparison is two-dataset (user vs PGA) so does not use per-club colors
+- **Pattern rule:** Any future chart showing per-club data points must use `getClubColor(club)` instead of array indexing
+- **Impact:** Visual consistency — 7i is always the same color on every chart
+
+### 2026-03-25 — Session: TODOs 71-76 (continued)
 
 **Batch 8 Outcome:** All frontend features implemented and rendering. 7 commits total.
 
@@ -388,3 +415,15 @@ Template: 	emplates/analytics/dispersion.html updated to include these fields in
 - O(1) lookup via pre-built `_CLUB_ORDER_MAP` index
 - Applied to: carry distribution, club comparison, launch-spin-stability
 - Unknown clubs sort alphabetically at end
+
+### 2026-03-25 — TODOs 81-85: Colors, Dispersion Axis, Shot Shape, PGA Table
+
+**TODO 85 — getClubColor (foundation):** Added global `getClubColor(club)` that maps club name to a fixed palette index via `_CLUB_ORDER_MAP`. Same club always gets same color across all charts. Applied to carry distribution, dispersion scatter, spin vs roll, and shot shape. Unknown clubs fall back to a consistent index.
+
+**TODO 82 — Symmetric dispersion x-axis:** After building shot data, compute `maxAbsOffline` across all items, then set `scales.x.min = -limit` and `scales.x.max = limit` with 10% padding. Zero is always centered now.
+
+**TODO 83 — 2-line x-axis label:** Replaced single-line `'Offline (yards) ← Left | Right →'` with array `['← Left | Right →', 'Offline (Yards)']`. Chart.js renders array title text as stacked lines.
+
+**TODO 84 — Per-club shot shape:** Rewrote `initShotShape` from single green dataset to per-club grouped scatter (same pattern as dispersion/spin). Each club gets own dataset with `getClubColor`. Tooltip now shows club name + path/face/shape. Legend enabled at right position.
+
+**TODO 81 — PGA Tour Average table:** Added Bootstrap card with `table-golf` header at bottom of analytics.html. `loadPGAAverages()` in charts.js fetches `/api/analytics/pga-averages` once on page load (not on every filter change — PGA data is static reference). Loading spinner + graceful error handling.
