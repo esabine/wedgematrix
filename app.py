@@ -19,7 +19,7 @@ from services.analytics import (
     launch_spin_stability, radar_comparison,
     compute_dispersion_boundary,
 )
-from services.club_matrix import build_club_matrix, CLUB_ORDER
+from services.club_matrix import build_club_matrix, CLUB_ORDER, club_sort_key
 from services.wedge_matrix import build_wedge_matrix, SWING_SIZES, WEDGE_CLUBS
 from services.loft_analysis import analyze_loft, loft_summary
 
@@ -444,14 +444,7 @@ def register_routes(app):
         )
 
         # Sort clubs by CLUB_ORDER for consistent frontend display
-        ordered = {}
-        for c in CLUB_ORDER:
-            if c in outliers:
-                ordered[c] = outliers[c]
-        # Include any clubs not in CLUB_ORDER at the end
-        for c in outliers:
-            if c not in ordered:
-                ordered[c] = outliers[c]
+        ordered = {c: outliers[c] for c in sorted(outliers.keys(), key=club_sort_key)}
 
         total_count = sum(len(v) for v in ordered.values())
         return jsonify({
@@ -598,13 +591,7 @@ def register_routes(app):
         elif chart_type == 'carry-distribution':
             raw = carry_distribution(session_id=session_id, club_short=clubs, date_from=date_from, percentile=percentile)
             # Sort by CLUB_ORDER for consistent display
-            ordered = {}
-            for c in CLUB_ORDER:
-                if c in raw:
-                    ordered[c] = raw[c]
-            for c in raw:
-                if c not in ordered:
-                    ordered[c] = raw[c]
+            ordered = {c: raw[c] for c in sorted(raw.keys(), key=club_sort_key)}
             return jsonify(ordered)
         elif chart_type == 'club-comparison':
             # Box-and-whisker data with wedge sub-swing breakdown
@@ -648,35 +635,14 @@ def register_routes(app):
                 entry.update(box)
                 entries[label] = entry
 
-            # Sort: non-wedge in CLUB_ORDER, wedge sub-swings grouped
-            result = []
-            for c in CLUB_ORDER:
-                if c in WEDGE_CLUBS and len(wedge_swing_types.get(c, set())) > 1:
-                    for sw in SWING_SIZES:
-                        key = f'{c}-{sw}'
-                        if key in entries:
-                            result.append(entries.pop(key))
-                    for key in list(entries.keys()):
-                        if key.startswith(f'{c}-'):
-                            result.append(entries.pop(key))
-                else:
-                    if c in entries:
-                        result.append(entries.pop(c))
-            # Any remaining
-            for key in entries:
-                result.append(entries[key])
+            # Sort by canonical CLUB_ORDER (handles both bare and compound labels)
+            result = [entries[k] for k in sorted(entries.keys(), key=club_sort_key)]
             return jsonify(result)
         elif chart_type == 'loft-analysis':
             return jsonify(analyze_loft(session_id=session_id, club_short=clubs, date_from=date_from))
         elif chart_type == 'loft-summary':
             raw = loft_summary(session_id=session_id, date_from=date_from)
-            ordered = {}
-            for c in CLUB_ORDER:
-                if c in raw:
-                    ordered[c] = raw[c]
-            for c in raw:
-                if c not in ordered:
-                    ordered[c] = raw[c]
+            ordered = {c: raw[c] for c in sorted(raw.keys(), key=club_sort_key)}
             return jsonify(ordered)
         elif chart_type == 'errant-flags':
             if session_id is None:

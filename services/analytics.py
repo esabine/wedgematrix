@@ -361,7 +361,8 @@ def carry_distribution(session_id=None, club_short=None, date_from=None, percent
 
     # Compute gapping: distance difference between adjacent clubs in CLUB_ORDER
     # Gap = this club's q3 carry minus the next shorter club's q3 carry
-    ordered_clubs = [c for c in CLUB_ORDER if c in result]
+    from services.club_matrix import club_sort_key
+    ordered_clubs = sorted(result.keys(), key=club_sort_key)
     for i, club in enumerate(ordered_clubs):
         if i < len(ordered_clubs) - 1:
             next_club = ordered_clubs[i + 1]
@@ -556,27 +557,11 @@ def launch_spin_stability(session_id=None, club_short=None, date_from=None, perc
     _detect_clusters(all_spin_cvs, 'spin')
     _detect_clusters(all_launch_cvs, 'launch')
 
-    # Sort: non-wedge clubs in CLUB_ORDER, then wedge sub-swings grouped by club
-    from services.wedge_matrix import SWING_SIZES
+    # Sort by canonical CLUB_ORDER (handles both bare and compound labels)
+    from services.club_matrix import club_sort_key
     ordered = {}
-    for c in CLUB_ORDER:
-        if c in WEDGE_CLUBS:
-            # Insert sub-swing entries for this wedge club
-            for sw in SWING_SIZES:
-                key = f'{c}-{sw}'
-                if key in result:
-                    ordered[key] = result[key]
-            # Also include any swing sizes not in SWING_SIZES (e.g. 'full')
-            for key in result:
-                if key.startswith(f'{c}-') and key not in ordered:
-                    ordered[key] = result[key]
-        else:
-            if c in result:
-                ordered[c] = result[c]
-    # Include any remaining entries not matched
-    for c in result:
-        if c not in ordered:
-            ordered[c] = result[c]
+    for key in sorted(result.keys(), key=club_sort_key):
+        ordered[key] = result[key]
 
     # Build correlation summary
     total_entries = len(ordered)
@@ -701,13 +686,8 @@ def radar_comparison(session_id=None, club_short=None, date_from=None, percentil
         }
 
     # Sort per_club by CLUB_ORDER
-    ordered_per_club = {}
-    for c in CLUB_ORDER:
-        if c in per_club:
-            ordered_per_club[c] = per_club[c]
-    for c in per_club:
-        if c not in ordered_per_club:
-            ordered_per_club[c] = per_club[c]
+    from services.club_matrix import club_sort_key
+    ordered_per_club = {c: per_club[c] for c in sorted(per_club.keys(), key=club_sort_key)}
 
     # Build aggregated summary
     axes = [axis_labels[k] for k in metric_keys]

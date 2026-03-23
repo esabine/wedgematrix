@@ -9,6 +9,8 @@ CLUB_NAME_MAP = {
     '3 Wood': '3W',
     '2 Hybrid': '2H',
     '3 Hybrid': '3H',
+    '4 Hybrid': '4H',
+    '3 Iron': '3i',
     '4 Iron': '4i',
     '5 Iron': '5i',
     '6 Iron': '6i',
@@ -270,18 +272,13 @@ def parse_csv(csv_text):
             'apex': safe_float(parts[9]) if len(parts) > 9 else None,
             'carry': safe_float(parts[10]) if len(parts) > 10 else None,
             'total': safe_float(parts[11]) if len(parts) > 11 else None,
-            'offline': safe_float(parts[12]) if len(parts) > 12 else None,
+            'offline': parse_direction(parts[12]) if len(parts) > 12 else None,
             'landing_angle': safe_float(parts[13]) if len(parts) > 13 else None,
             'club_path': parse_direction(parts[14]) if len(parts) > 14 else None,
             'face_angle': parse_direction(parts[15]) if len(parts) > 15 else None,
             'attack_angle': safe_float(parts[16]) if len(parts) > 16 else None,
             'dynamic_loft': safe_float(parts[17]) if len(parts) > 17 else None,
         }
-
-        # Handle signed offline: L prefix = negative (left), R prefix = positive (right)
-        offline_raw = parts[12].strip() if len(parts) > 12 else None
-        if offline_raw and (offline_raw.startswith('L') or offline_raw.startswith('R')):
-            shot['offline'] = parse_direction(offline_raw)
 
         shots.append(shot)
 
