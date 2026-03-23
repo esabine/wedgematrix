@@ -369,16 +369,18 @@ Template: 	emplates/analytics/dispersion.html updated to include these fields in
 
 ### 2026-03-25 — Concentric Arc Chart + Canonical Club Ordering (TODOs 77-78)
 
-**TODO 77 (Concentric Arc Carry Chart):** Replaced the bar chart carry-distance visualization with a custom HTML5 Canvas concentric arc chart. Design inspired by driving range distance markers:
-- Dark green radial gradient background (driving range aesthetic)
-- 170° semicircular arcs emanating from golfer origin at bottom center
-- Reference rings at 25yd/50yd intervals with distance labels
-- Color-coded arcs: woods (#66bb6a), hybrids (#26c6da), irons (#42a5f5), wedges (PW=#ffb74d, AW=#ffa726, SW=#ef5350, LW=#ab47bc)
-- Gap fills highlight problem spacing: red tint for >20yd gaps, amber for <5yd
-- Right-side legend sidebar with color swatches, club names, distances, and ⚠ gap badges
-- Hover tooltip shows club details + shot count
-- Custom `destroy()` method for compatibility with existing `chartInstances` cleanup pattern
-- HiDPI/Retina display support via `devicePixelRatio` scaling
+**TODO 77 — CORRECTED:** Concentric arc layout belongs on the **Dispersion Pattern** chart, NOT the carry distance chart. Original misread: the reference image was about the layout concept (concentric rings = distance markers), not the chart target.
+
+**Carry Distance chart:** Restored to original bar chart with gap annotations (badge pills between bars, bracket connectors). `sortByCanonicalOrder` still applied to labels.
+
+**Dispersion Pattern chart:** Now uses concentric arc distance rings as a Chart.js `beforeDatasetsDraw` plugin (`dispersionConcentricArcs`):
+- Arcs represent constant distance from the golfer at origin (0,0): `y = sqrt(R² - x²)`
+- Drawn at 50yd intervals (25yd if short range, 100yd if very long) in golf-green `rgba(45,106,79,0.18)`
+- Labels centered on each arc ("50 yd", "100 yd", etc.)
+- Standard y-axis grid lines disabled (replaced by the arcs)
+- All existing features preserved: scatter dots, P90 boundary polygons, target line, tooltips, club legend
+- Plugin draws behind data (beforeDatasetsDraw) and clips to chartArea
+- Light theme: arcs are subtle enough not to overpower the scatter dots
 
 **TODO 78 (Canonical Club Ordering):** Added `CANONICAL_CLUB_ORDER` array and `sortByCanonicalOrder()` utility at top of charts.js:
 - Order: Woods → Hybrids → Irons → Full wedge shots → 3/3 → 2/3 → 1/3 → clock swings (10:2 through 8:4)
@@ -386,5 +388,3 @@ Template: 	emplates/analytics/dispersion.html updated to include these fields in
 - O(1) lookup via pre-built `_CLUB_ORDER_MAP` index
 - Applied to: carry distribution, club comparison, launch-spin-stability
 - Unknown clubs sort alphabetically at end
-
-**Key Pattern:** Custom Canvas charts store a `{destroy: function()}` object in `chartInstances` to stay compatible with the Chart.js cleanup lifecycle. The `destroyChart()` function also cleans up custom event handlers for the arc chart.
