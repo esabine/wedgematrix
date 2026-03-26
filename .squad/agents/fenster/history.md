@@ -343,3 +343,36 @@ Paired with Hockney's 27 correctness, edge case, integration, and regression tes
 - Response includes all 14 clubs (1W through LW) in canonical order.
 
 **Test Score:** 282/285 passing. Same 3 pre-existing loft_analysis failures. No regressions.
+
+### 2026-03-25 — TODOs 89-92: Matrix Metadata, Shot Limit, Print Card Enhancements
+
+**TODO 89 (Tooltip metadata — shot_count + oldest_date):**
+- `build_club_matrix()` now returns `oldest_date` (ISO string) per row. `shot_count` was already present.
+- `build_wedge_matrix()` now returns `shot_count` and `oldest_date` per cell (inside each cell dict).
+- Helper functions `_session_date_lookup()`, `_oldest_date()` added to both services to avoid N+1 queries.
+- Templates can use these in `data-*` attributes for JS-driven tooltips.
+
+**TODO 90 (Shot limit parameter):**
+- Added `shot_limit=None` parameter to `build_club_matrix()` and `build_wedge_matrix()`.
+- When set, each club/cell group is sorted most-recent-first (by session_date desc, shot id desc) and truncated to N.
+- Routes accept `?shot_limit=30` query param and pass to service functions + template context.
+- Helper `_limit_recent()` shared between both services.
+
+**TODO 91 (Total distance on printed wedge card):**
+- `build_wedge_matrix()` now computes and returns `total` (percentile of total distances) in every cell.
+- Fraction cells: `{carry, total, shot_count, oldest_date}`. Clock cells: same plus `max`.
+- Template already handles `cell.total` via carry/total format in print_card.html.
+
+**TODO 92 (8i and 9i on printed wedge card):**
+- Added `extra_full_clubs` parameter to `build_wedge_matrix()`.
+- When `extra_full_clubs=['8i', '9i']`, queries full-swing shots for those clubs and maps them to the '3/3' row.
+- Returns extended clubs list: `['8i', '9i', 'PW', 'AW', 'SW', 'LW']`.
+- Print routes pass `extra_full_clubs=['8i', '9i']` automatically. Non-print routes unaffected.
+- `PRINT_WEDGE_CLUBS` constant exported for reference.
+
+**Key patterns:**
+- Session date lookup via `_session_date_lookup()` avoids N+1: collects unique session_ids, single query for dates.
+- `_limit_recent()` sorts by (session_date, shot_id) descending for deterministic recency ordering.
+- `extra_full_clubs` approach keeps wedge matrix function general — any club can be injected into the 3/3 row.
+
+**Test Score:** 305 passing (excluding 3 pre-existing loft_analysis failures). No regressions.

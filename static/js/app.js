@@ -6,6 +6,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     initFlashAutoDismiss();
     initMatrixControls();
+    initMatrixTooltips();
     initShotExclusionToggles();
     initBatchSelectExclude();
     initDeleteConfirmation();
@@ -22,10 +23,11 @@ function initFlashAutoDismiss() {
     });
 }
 
-/* ---------- Matrix Controls (Percentile + Session Scope) ---------- */
+/* ---------- Matrix Controls (Percentile + Session Scope + Shot Limit) ---------- */
 function initMatrixControls() {
     var percentileSelect = document.getElementById('percentile-select');
     var sessionScope = document.getElementById('session-scope');
+    var shotLimit = document.getElementById('shot-limit');
 
     if (percentileSelect) {
         percentileSelect.addEventListener('change', reloadMatrixView);
@@ -33,11 +35,22 @@ function initMatrixControls() {
     if (sessionScope) {
         sessionScope.addEventListener('change', reloadMatrixView);
     }
+    if (shotLimit) {
+        // Reload when user finishes typing (Enter key or blur)
+        shotLimit.addEventListener('change', reloadMatrixView);
+        shotLimit.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                reloadMatrixView();
+            }
+        });
+    }
 }
 
 function reloadMatrixView() {
     var percentileSelect = document.getElementById('percentile-select');
     var sessionScope = document.getElementById('session-scope');
+    var shotLimit = document.getElementById('shot-limit');
     var matrixType = percentileSelect
         ? percentileSelect.getAttribute('data-matrix')
         : 'club';
@@ -49,9 +62,20 @@ function reloadMatrixView() {
     if (sessionScope && sessionScope.value) {
         params.set('session_id', sessionScope.value);
     }
+    if (shotLimit && shotLimit.value && parseInt(shotLimit.value, 10) > 0) {
+        params.set('shot_limit', shotLimit.value);
+    }
 
     var baseUrl = matrixType === 'wedge' ? '/wedge-matrix' : '/club-matrix';
     window.location.href = baseUrl + '?' + params.toString();
+}
+
+/* ---------- Matrix Cell Tooltips (shot count + oldest date) ---------- */
+function initMatrixTooltips() {
+    var tooltipEls = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    tooltipEls.forEach(function (el) {
+        new bootstrap.Tooltip(el);
+    });
 }
 
 /* ---------- Shot Exclude Toggle (AJAX) ---------- */

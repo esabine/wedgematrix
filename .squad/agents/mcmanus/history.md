@@ -300,6 +300,35 @@ Cross-agent coordination:
 
 **Tooltip improvement:** Hover on any bar now shows both `Gap to next club` and `Gap from prev club` (bidirectional), not just `Gap from prev`.
 
+### TODOs 89-92 — Matrix Tooltips, Shot Limit, Print Card Enhancements
+
+**TODO 89 — Hover Tooltips (wedge_matrix.html, club_matrix.html, app.js):**
+- Added `data-bs-toggle="tooltip"` on all matrix cells with data
+- Tooltip shows shot count and oldest date (e.g., "42 shots · oldest Mar 08, 2026")
+- Uses `cell.shot_count` / `cell.oldest_date` for wedge, `row.shot_count` / `row.oldest_date` for club
+- `initMatrixTooltips()` added to app.js, called on DOMContentLoaded
+- Requires Fenster to add `shot_count` and `oldest_date` to service return data
+
+**TODO 90 — Shot Limit Input (wedge_matrix.html, club_matrix.html, app.js):**
+- Number input (`#shot-limit`) added to controls card on both pages, col-md-2
+- Placeholder "All", min=1, fires on `change` and Enter key
+- `reloadMatrixView()` now includes `shot_limit` query param when set
+- Print Card link on both pages passes `shot_limit` through to the print route
+- Footer text shows "(limited to N most recent)" when shot_limit active
+- Requires Fenster to read `shot_limit` query param and slice shots in service layer
+
+**TODO 91 — Print Wedge Card: Carry/Total (print_card.html):**
+- All wedge cells now show `carry/total` format when `cell.total` is available
+- Fractions (previously carry-only) now show carry/total
+- Clock shots (previously carry/max) now show carry/total, falling back to carry/max if no total
+- Uses Jinja2 `is defined` check so template works before and after backend adds `total`
+
+**TODO 92 — Print Wedge Card: 8i and 9i Columns (print_card.html, print.css):**
+- Wedge card header row now: [blank, 8i, 9i, PW, AW, SW, LW] (7 columns)
+- Data loop iterates `['8i', '9i', 'PW', 'AW', 'SW', 'LW']`
+- Print CSS updated: font sizes reduced (headers 10pt, cells 10.5pt, club-col 10pt) to fit 7 columns in 2.91" width
+- Requires Fenster to add 8i/9i data to `build_wedge_matrix()` return
+
 **Key pattern:** Canvas annotations that represent relationships (gaps, deltas) between data points should be visually positioned between those points, not on either one.
 
 ---

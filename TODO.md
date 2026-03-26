@@ -86,3 +86,7 @@ nothing else. For the Percentile, just show the Percentile with the number, as i
 -~~in the club comparison and launch & spin stability charts, remove AW-4/4, LW-4/4, and SW-4/4. The data for AW-full, SW-full, and LW-full, should come between PW and AW-3/3.  Remove "-full" from AW-full, SW-full, and LW-full.~~ DONE
 -~~Under Shot Shape Analysis, move "Club Path (°)" to the second line. Center the text under the 0 of the X axis.~~ DONE
 -~~Under Shot Shape Analysis, move "Face Angle (°)" to the first line, the remainder to the second line. Center-justify the text, but also line it up so the pipe (|) is directly to the left of the 0 of the Y axis.~~ DONE
+-~~on both the wedge matrix and club matrix pages, when I hold the mouse over any of the data, a popup should show me how many data points are behind that number and the oldest date of data~~ DONE
+-~~on both the wedge matrix and club matrix pages I want a field that I can type in the number of shots to limit each number's population to, for example if I enter 30, then for every individual calculation, only the most recent 30 shots for that club and swing type calculation should be used. The percentiles are still applicable, so if I had selected 30 for the count and P75, then show the 75th percentile of those 30 most recent shots for the club & swing type combo.~~ DONE
+-~~on the printed wedge matrix card, add the total (as in carry/total) like we're doing with the clock shots~~ DONE
+-~~on the printed wedge matrix card, add columns for 9 iron and 8 iron~~ DONE

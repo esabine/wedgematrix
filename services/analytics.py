@@ -15,6 +15,27 @@ def percentile_value(values, percentile):
     return float(np.percentile(clean, percentile))
 
 
+# PGA Tour averages by club (published reference data).
+# Used by radar_comparison() and the /api/analytics/pga-averages endpoint.
+PGA_AVERAGES = {
+    '1W': {'carry': 275, 'spin_rate': 2686, 'launch_angle': 10.9, 'ball_speed': 171, 'dispersion': 25},
+    '3W': {'carry': 243, 'spin_rate': 3655, 'launch_angle': 9.2, 'ball_speed': 158, 'dispersion': 20},
+    '2H': {'carry': 227, 'spin_rate': 4437, 'launch_angle': 10.2, 'ball_speed': 152, 'dispersion': 18},
+    '3H': {'carry': 220, 'spin_rate': 4630, 'launch_angle': 10.5, 'ball_speed': 148, 'dispersion': 17},
+    '4i': {'carry': 210, 'spin_rate': 4836, 'launch_angle': 11.0, 'ball_speed': 143, 'dispersion': 15},
+    '5i': {'carry': 200, 'spin_rate': 5361, 'launch_angle': 12.1, 'ball_speed': 137, 'dispersion': 13},
+    '6i': {'carry': 189, 'spin_rate': 6231, 'launch_angle': 14.1, 'ball_speed': 132, 'dispersion': 11},
+    '7i': {'carry': 172, 'spin_rate': 7097, 'launch_angle': 16.3, 'ball_speed': 120, 'dispersion': 8},
+    '8i': {'carry': 160, 'spin_rate': 7998, 'launch_angle': 18.1, 'ball_speed': 115, 'dispersion': 7},
+    '9i': {'carry': 148, 'spin_rate': 8647, 'launch_angle': 20.4, 'ball_speed': 109, 'dispersion': 6},
+    'PW': {'carry': 136, 'spin_rate': 9316, 'launch_angle': 24.2, 'ball_speed': 102, 'dispersion': 5},
+    'AW': {'carry': 118, 'spin_rate': 9900, 'launch_angle': 25.0, 'ball_speed': 93, 'dispersion': 6},
+    'SW': {'carry': 97, 'spin_rate': 10200, 'launch_angle': 27.5, 'ball_speed': 82, 'dispersion': 7},
+    'LW': {'carry': 82, 'spin_rate': 10400, 'launch_angle': 30.0, 'ball_speed': 72, 'dispersion': 8},
+}
+DEFAULT_PGA = {'carry': 172, 'spin_rate': 7097, 'launch_angle': 16.3, 'ball_speed': 120, 'dispersion': 8}
+
+
 # Alias used by tests
 compute_percentile = percentile_value
 
@@ -596,25 +617,6 @@ def radar_comparison(session_id=None, club_short=None, date_from=None, percentil
         }
     """
     from services.club_matrix import CLUB_ORDER
-
-    # PGA Tour averages by club (published reference data)
-    PGA_AVERAGES = {
-        '1W': {'carry': 275, 'spin_rate': 2686, 'launch_angle': 10.9, 'ball_speed': 171, 'dispersion': 25},
-        '3W': {'carry': 243, 'spin_rate': 3655, 'launch_angle': 9.2, 'ball_speed': 158, 'dispersion': 20},
-        '2H': {'carry': 227, 'spin_rate': 4437, 'launch_angle': 10.2, 'ball_speed': 152, 'dispersion': 18},
-        '3H': {'carry': 220, 'spin_rate': 4630, 'launch_angle': 10.5, 'ball_speed': 148, 'dispersion': 17},
-        '4i': {'carry': 210, 'spin_rate': 4836, 'launch_angle': 11.0, 'ball_speed': 143, 'dispersion': 15},
-        '5i': {'carry': 200, 'spin_rate': 5361, 'launch_angle': 12.1, 'ball_speed': 137, 'dispersion': 13},
-        '6i': {'carry': 189, 'spin_rate': 6231, 'launch_angle': 14.1, 'ball_speed': 132, 'dispersion': 11},
-        '7i': {'carry': 172, 'spin_rate': 7097, 'launch_angle': 16.3, 'ball_speed': 120, 'dispersion': 8},
-        '8i': {'carry': 160, 'spin_rate': 7998, 'launch_angle': 18.1, 'ball_speed': 115, 'dispersion': 7},
-        '9i': {'carry': 148, 'spin_rate': 8647, 'launch_angle': 20.4, 'ball_speed': 109, 'dispersion': 6},
-        'PW': {'carry': 136, 'spin_rate': 9316, 'launch_angle': 24.2, 'ball_speed': 102, 'dispersion': 5},
-        'AW': {'carry': 118, 'spin_rate': 9900, 'launch_angle': 25.0, 'ball_speed': 93, 'dispersion': 6},
-        'SW': {'carry': 97, 'spin_rate': 10200, 'launch_angle': 27.5, 'ball_speed': 82, 'dispersion': 7},
-        'LW': {'carry': 82, 'spin_rate': 10400, 'launch_angle': 30.0, 'ball_speed': 72, 'dispersion': 8},
-    }
-    DEFAULT_PGA = {'carry': 172, 'spin_rate': 7097, 'launch_angle': 16.3, 'ball_speed': 120, 'dispersion': 8}
 
     shots = get_shots_query(
         session_id=session_id, club_short=club_short,

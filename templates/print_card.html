@@ -108,10 +108,9 @@
             <thead>
                 <tr>
                     <th></th>
-                    <th>PW</th>
-                    <th>AW</th>
-                    <th>SW</th>
-                    <th>LW</th>
+                    {% for club in (wedge_clubs or ['PW', 'AW', 'SW', 'LW']) %}
+                    <th>{{ club }}</th>
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
@@ -121,14 +120,14 @@
                 {% for size in swing_sizes %}
                 <tr class="{% if size == '10:2' %}clock-divider{% endif %}">
                     <td class="club-col">{{ size }}</td>
-                    {% for club in ['PW', 'AW', 'SW', 'LW'] %}
+                    {% for club in (wedge_clubs or ['PW', 'AW', 'SW', 'LW']) %}
                     <td>
                         {% set cell = wedge_matrix.get(size, {}).get(club) %}
                         {% if cell %}
                             {% if size in fraction_sizes %}
-                                {{ cell.carry }}
+                                {% if cell.total is defined and cell.total %}{{ cell.carry }}/{{ cell.total }}{% else %}{{ cell.carry }}{% endif %}
                             {% else %}
-                                {{ cell.carry }}/{{ cell.max }}
+                                {% if cell.total is defined and cell.total %}{{ cell.carry }}/{{ cell.total }}{% else %}{{ cell.carry }}/{{ cell.max }}{% endif %}
                             {% endif %}
                         {% endif %}
                     </td>

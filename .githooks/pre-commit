@@ -1,0 +1,6 @@
+#!/bin/sh
+# Auto-bump patch version on every commit.
+# Activate with: git config core.hooksPath .githooks
+
+python bump_version.py patch
+git add app.py

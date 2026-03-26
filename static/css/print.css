@@ -47,10 +47,10 @@
     width: 2.91in;
 }
 
-/* Wedge card: tighter layout for 5-column table (PW/AW/SW/LW) */
-#wedge-card .pocket-table th { font-size: 11pt; padding: 1.5pt 1.5pt; }
-#wedge-card .pocket-table td { padding: 1pt 1.5pt; font-size: 12pt; }
-#wedge-card .pocket-table .club-col { width: 26px; font-size: 11pt; }
+/* Wedge card: tighter layout for 7-column table (up to 8i/9i/PW/AW/SW/LW) */
+#wedge-card .pocket-table th { font-size: 10pt; padding: 1.5pt 1pt; }
+#wedge-card .pocket-table td { padding: 1pt 1pt; font-size: 10.5pt; }
+#wedge-card .pocket-table .club-col { width: 24px; font-size: 10pt; }
 
 .card-header-row {
     display: flex;

@@ -5,7 +5,7 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h3 no-print"><i class="bi bi-grid-3x3"></i> Club Matrix</h1>
     <div class="d-flex gap-2">
-        <a href="{{ url_for('print_card') }}?percentile={{ percentile or 75 }}{% if selected_session %}&session_id={{ selected_session }}{% endif %}" class="btn btn-outline-secondary" title="Print pocket card">
+        <a href="{{ url_for('print_card') }}?percentile={{ percentile or 75 }}{% if selected_session %}&session_id={{ selected_session }}{% endif %}{% if shot_limit %}&shot_limit={{ shot_limit }}{% endif %}" class="btn btn-outline-secondary" title="Print pocket card">
             <i class="bi bi-printer"></i> Print Card
         </a>
     </div>
@@ -40,6 +40,15 @@
                     <option value="95" {% if percentile == 95 %}selected{% endif %}>P95</option>
                 </select>
             </div>
+            <div class="col-md-2">
+                <label class="form-label form-label-sm mb-1">Shot Limit</label>
+                <input type="number" id="shot-limit" class="form-control form-control-sm"
+                       data-matrix="club"
+                       min="1" step="1"
+                       placeholder="All"
+                       value="{{ shot_limit if shot_limit }}"
+                       title="Limit each club to the N most recent shots">
+            </div>
         </div>
     </div>
 </div>
@@ -60,13 +69,25 @@
                 {% for row in matrix %}
                 <tr>
                     <td class="fw-bold matrix-club-cell">{{ row.club }}</td>
-                    <td class="text-center matrix-cell {{ 'has-data' if row.carry else '' }}">
+                    <td class="text-center matrix-cell {{ 'has-data' if row.carry else '' }}"
+                        {% if row.shot_count is defined and row.shot_count %}
+                        data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="{{ row.shot_count }} shot{{ 's' if row.shot_count != 1 else '' }}{% if row.oldest_date is defined and row.oldest_date %} · oldest {{ row.oldest_date }}{% endif %}"
+                        {% endif %}>
                         {{ row.carry if row.carry else '—' }}
                     </td>
-                    <td class="text-center matrix-cell {{ 'has-data' if row.total else '' }}">
+                    <td class="text-center matrix-cell {{ 'has-data' if row.total else '' }}"
+                        {% if row.shot_count is defined and row.shot_count %}
+                        data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="{{ row.shot_count }} shot{{ 's' if row.shot_count != 1 else '' }}{% if row.oldest_date is defined and row.oldest_date %} · oldest {{ row.oldest_date }}{% endif %}"
+                        {% endif %}>
                         {{ row.total if row.total else '—' }}
                     </td>
-                    <td class="text-center matrix-cell {{ 'has-data' if row.max else '' }}">
+                    <td class="text-center matrix-cell {{ 'has-data' if row.max else '' }}"
+                        {% if row.shot_count is defined and row.shot_count %}
+                        data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="{{ row.shot_count }} shot{{ 's' if row.shot_count != 1 else '' }}{% if row.oldest_date is defined and row.oldest_date %} · oldest {{ row.oldest_date }}{% endif %}"
+                        {% endif %}>
                         {{ row.max if row.max else '—' }}
                     </td>
                 </tr>
@@ -86,7 +107,7 @@
 
 <p class="text-muted small mt-2">
     <i class="bi bi-info-circle"></i>
-    Carry &amp; Total use P{{ percentile or 75 }} percentile of non-excluded shots. Max is the highest total ever recorded.
+    Carry &amp; Total use P{{ percentile or 75 }} percentile of non-excluded shots{% if shot_limit %} (limited to {{ shot_limit }} most recent){% endif %}. Max is the highest total ever recorded.
 </p>
 
 <!-- Percentile Explanation -->

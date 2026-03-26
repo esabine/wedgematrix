@@ -1,4 +1,5 @@
 import numpy as np
+from datetime import date
 from models.database import db, Session, Shot, ClubLoft
 from services.analytics import percentile_value
 
@@ -42,18 +43,44 @@ def club_sort_key(label):
     return (1, 0, label)
 
 
-def build_club_matrix(session_id=None, percentile=75, include_test=False):
+def _session_date_lookup(shots):
+    """Build {session_id: session_date} lookup from a list of shots."""
+    sids = {s.session_id for s in shots}
+    if not sids:
+        return {}
+    return {sess.id: sess.session_date
+            for sess in Session.query.filter(Session.id.in_(sids)).all()}
+
+
+def _limit_recent(shots, shot_limit, date_lookup):
+    """Sort shots most-recent-first and return the top N."""
+    shots.sort(
+        key=lambda s: (date_lookup.get(s.session_id) or date.min, s.id),
+        reverse=True,
+    )
+    return shots[:shot_limit]
+
+
+def _oldest_date(shots, date_lookup):
+    """Return the oldest session date (ISO string) among a list of shots."""
+    dates = [date_lookup.get(s.session_id) for s in shots
+             if date_lookup.get(s.session_id) is not None]
+    return min(dates).isoformat() if dates else None
+
+
+def build_club_matrix(session_id=None, percentile=75, include_test=False,
+                      shot_limit=None):
     """Build the club matrix: Club | Carry | Total | Max.
 
     Args:
         session_id: Filter to single session, or None for all sessions.
         percentile: Which percentile to use (default P75).
         include_test: When False and session_id is None, exclude test sessions.
+        shot_limit: When set, use only the N most recent shots per club.
 
     Returns list of dicts ordered by standard loft (Driver → LW).
-    Only includes clubs that have non-excluded shot data.
+    Each row includes shot_count and oldest_date for tooltip metadata.
     """
-    # Build base query — only non-excluded shots
     q = Shot.query.filter(Shot.excluded == False)
     if session_id is not None:
         q = q.filter(Shot.session_id == session_id)
@@ -62,12 +89,13 @@ def build_club_matrix(session_id=None, percentile=75, include_test=False):
 
     shots = q.all()
 
+    date_lookup = _session_date_lookup(shots)
+
     # Group by club_short
     by_club = {}
     for s in shots:
         by_club.setdefault(s.club_short, []).append(s)
 
-    # Get loft data for ordering
     lofts = {cl.club_short: cl.standard_loft for cl in ClubLoft.query.all()}
 
     matrix = []
@@ -76,6 +104,9 @@ def build_club_matrix(session_id=None, percentile=75, include_test=False):
             continue
 
         club_shots = by_club[club]
+        if shot_limit:
+            club_shots = _limit_recent(club_shots, shot_limit, date_lookup)
+
         carries = [s.carry for s in club_shots if s.carry is not None]
         totals = [s.total for s in club_shots if s.total is not None]
 
@@ -91,6 +122,7 @@ def build_club_matrix(session_id=None, percentile=75, include_test=False):
             'total': total_pct,
             'max': max_total,
             'shot_count': len(club_shots),
+            'oldest_date': _oldest_date(club_shots, date_lookup),
         })
 
     return matrix

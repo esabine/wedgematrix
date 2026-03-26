@@ -7,7 +7,8 @@ from flask import (
     flash, jsonify, send_from_directory
 )
 
-VERSION = '0.5.0'
+# Auto-incremented by bump_version.py. Run manually or via .githooks/pre-commit.
+VERSION = '0.6.1'
 from config import Config
 from models.database import db, Session, Shot, ClubLoft, init_db
 from models.seed import seed_club_lofts
@@ -17,10 +18,10 @@ from services.analytics import (
     dispersion_data, spin_vs_carry_data, shot_shape_data,
     carry_distribution, get_shots_query, detect_outliers,
     launch_spin_stability, radar_comparison,
-    compute_dispersion_boundary,
+    compute_dispersion_boundary, PGA_AVERAGES,
 )
 from services.club_matrix import build_club_matrix, CLUB_ORDER, club_sort_key
-from services.wedge_matrix import build_wedge_matrix, SWING_SIZES, WEDGE_CLUBS
+from services.wedge_matrix import build_wedge_matrix, SWING_SIZES, WEDGE_CLUBS, PRINT_WEDGE_CLUBS
 from services.loft_analysis import analyze_loft, loft_summary
 
 DATE_RANGE_DAYS = {'7': 7, '30': 30, '60': 60, '90': 90}
@@ -229,26 +230,32 @@ def register_routes(app):
         session_id = request.args.get('session_id', type=int)
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
         include_test = request.args.get('include_test', 'false').lower() == 'true'
+        shot_limit = request.args.get('shot_limit', type=int)
         all_sessions = Session.query.order_by(Session.session_date.desc()).all()
-        matrix = build_club_matrix(session_id=session_id, percentile=percentile, include_test=include_test)
+        matrix = build_club_matrix(session_id=session_id, percentile=percentile,
+                                   include_test=include_test, shot_limit=shot_limit)
         return render_template('club_matrix.html',
                                matrix=matrix,
                                sessions=all_sessions,
                                selected_session=session_id,
-                               percentile=percentile)
+                               percentile=percentile,
+                               shot_limit=shot_limit)
 
     @app.route('/wedge-matrix')
     def wedge_matrix():
         session_id = request.args.get('session_id', type=int)
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
         include_test = request.args.get('include_test', 'false').lower() == 'true'
+        shot_limit = request.args.get('shot_limit', type=int)
         all_sessions = Session.query.order_by(Session.session_date.desc()).all()
-        data = build_wedge_matrix(session_id=session_id, percentile=percentile, include_test=include_test)
+        data = build_wedge_matrix(session_id=session_id, percentile=percentile,
+                                  include_test=include_test, shot_limit=shot_limit)
         return render_template('wedge_matrix.html',
                                matrix=data['matrix'],
                                sessions=all_sessions,
                                selected_session=session_id,
-                               percentile=percentile)
+                               percentile=percentile,
+                               shot_limit=shot_limit)
 
     @app.route('/shots')
     def shots():
@@ -356,16 +363,19 @@ def register_routes(app):
         return render_template('print_card.html',
                                club_matrix=matrix,
                                wedge_matrix={},
+                               wedge_clubs=WEDGE_CLUBS,
                                percentile=percentile)
 
     @app.route('/print/wedge-matrix')
     def print_wedge_matrix():
         session_id = request.args.get('session_id', type=int)
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
-        data = build_wedge_matrix(session_id=session_id, percentile=percentile)
+        data = build_wedge_matrix(session_id=session_id, percentile=percentile,
+                                  extra_full_clubs=['8i', '9i'])
         return render_template('print_card.html',
                                club_matrix=[],
                                wedge_matrix=data['matrix'],
+                               wedge_clubs=data['clubs'],
                                percentile=percentile)
 
     @app.route('/print/pocket-card')
@@ -373,10 +383,12 @@ def register_routes(app):
         session_id = request.args.get('session_id', type=int)
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
         cm = build_club_matrix(session_id=session_id, percentile=percentile)
-        wd = build_wedge_matrix(session_id=session_id, percentile=percentile)
+        wd = build_wedge_matrix(session_id=session_id, percentile=percentile,
+                                extra_full_clubs=['8i', '9i'])
         return render_template('print_card.html',
                                club_matrix=cm,
                                wedge_matrix=wd['matrix'],
+                               wedge_clubs=wd['clubs'],
                                percentile=percentile)
 
     @app.route('/print')
@@ -564,6 +576,17 @@ def register_routes(app):
         include_test = request.args.get('include_test', 'false').lower() == 'true'
         data = build_wedge_matrix(session_id=session_id, percentile=percentile, include_test=include_test)
         return jsonify({'percentile': percentile, 'session_id': session_id, **data})
+
+    @app.route('/api/analytics/pga-averages')
+    def api_pga_averages():
+        """Return PGA Tour average metrics for all 14 clubs in canonical order."""
+        clubs = []
+        for club_name in CLUB_ORDER:
+            if club_name in PGA_AVERAGES:
+                entry = {'club': club_name}
+                entry.update(PGA_AVERAGES[club_name])
+                clubs.append(entry)
+        return jsonify({'clubs': clubs})
 
     @app.route('/api/analytics/<chart_type>')
     def api_analytics(chart_type):
