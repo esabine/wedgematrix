@@ -329,6 +329,15 @@ Cross-agent coordination:
 - Print CSS updated: font sizes reduced (headers 10pt, cells 10.5pt, club-col 10pt) to fit 7 columns in 2.91" width
 - Requires Fenster to add 8i/9i data to `build_wedge_matrix()` return
 
+**2026-03-26 — Batch 11 Implementation (TODOs 89–92):**
+- All 4 TODOs implemented with Fenster on backend coordination
+- Bootstrap tooltips initialized on all matrix cells (wedge + club)
+- Shot limit input firing reload with query parameter
+- Print card displaying carry/total format (Jinja2 conditional fallback to carry/max)
+- Print card columns extended: 8i, 9i added; CSS tightened for 7-column wedge layout
+- 305 tests passing, zero regressions
+- Commit: (coordinated batch with Fenster's fb8df34)
+
 **Key pattern:** Canvas annotations that represent relationships (gaps, deltas) between data points should be visually positioned between those points, not on either one.
 
 ---

@@ -146,3 +146,45 @@ When `|offline| >= carry` (physically impossible data):
 - Radar comparison is two-dataset (user vs PGA) so does not use per-club colors.
 - **Pattern rule:** Any future chart that shows per-club data points must use `getClubColor(club)` instead of `CLUB_PALETTE[i]`.
 - **Impact:** Visual consistency — 7i is always the same color on every chart. No backend changes.
+
+---
+
+## User Directive: Strikethrough DONE Format for TODOs
+
+**Date:** 2026-03-26 | **Author:** ersabine | **Status:** Directive
+
+- Going forward, when a TODO item is done, mark it in TODO.md using ~~strikethrough~~ DONE format
+- Replaces prior comment-based tracking
+- User-requested pattern for improved visibility in task tracking
+- **Impact:** Improved team readability of TODO.md — completed items are visually distinct
+
+---
+
+## Matrix Metadata, Shot Limit, and Print Card Data Changes (TODOs 89–92)
+
+**Date:** 2026-03-26 | **Author:** Fenster | **Status:** Implemented
+
+### TODO 89: Cell Metadata for Tooltips
+- `build_club_matrix()` rows now include `oldest_date` (ISO string)
+- `build_wedge_matrix()` cells include both `shot_count` and `oldest_date` in every non-null cell dict
+- Frontend can render tooltips: `"{N} shot(s) · oldest {date}"`
+
+### TODO 90: Shot Limit Parameter
+- Both `build_club_matrix(shot_limit=N)` and `build_wedge_matrix(shot_limit=N)` accept optional parameter
+- Truncates each group to N most recent shots before computing percentiles
+- Routes read from `request.args` and pass to template context
+- Print routes inherit shot_limit parameter through links
+
+### TODO 91: Print Card Total Distance
+- Wedge cell data shape extended: cells now include `total` (percentile of total distances)
+- Fraction cells: `{carry, total, shot_count, oldest_date}`
+- Clock cells: `{carry, total, max, shot_count, oldest_date}`
+- Print template uses `cell.total` in `{carry}/{total}` display format
+
+### TODO 92: Print Card Extra Clubs (8i, 9i)
+- `build_wedge_matrix()` accepts `extra_full_clubs` list parameter
+- Full-swing shots for 8i and 9i are mapped to '3/3' row
+- Print routes automatically pass `extra_full_clubs=['8i', '9i']`
+- Template receives extended `wedge_clubs` variable; print CSS adjusted to fit new columns
+
+**Verification:** 305 tests passing, zero regressions. Frontend (McManus) implements tooltip initialization, shot limit input UI, carry/total display, and column rendering.

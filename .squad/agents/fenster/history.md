@@ -84,6 +84,13 @@ The wedgeMatrix backend is a Flask app (Python 3.11+, SQLite/SQLAlchemy) with mo
 - **API contract:** Returns dict `{club: {Carry, Spin Rate, Launch Angle, Ball Speed}}` for all 14 clubs (1W through LW). Values are baseline PGA averages on 0-150 scale (100 = PGA level).
 - **Impact:** Future endpoints needing PGA reference data should import from `services.analytics` instead of redefining.
 
+### 2026-03-26 — Matrix Metadata, Shot Limit, Print Card Totals, Extra Clubs (TODOs 89–92)
+- **Cell metadata:** `build_club_matrix()` rows now include `oldest_date` (ISO string). `build_wedge_matrix()` cells include both `shot_count` and `oldest_date`.
+- **Shot limit:** Both `build_club_matrix(shot_limit=N)` and `build_wedge_matrix(shot_limit=N)` accept optional parameter. Routes read from `request.args` and pass to services. Truncates to N most recent shots per group before computing percentiles.
+- **Print card totals:** Wedge cell shape extended with `total` field (percentile of total distances). Fraction cells: `{carry, total, shot_count, oldest_date}`. Clock cells: `{carry, total, max, shot_count, oldest_date}`.
+- **Extra clubs:** `build_wedge_matrix()` accepts `extra_full_clubs` list (e.g., `['8i', '9i']`). Full-swing shots for extra clubs mapped to '3/3' row. Print routes automatically pass `extra_full_clubs=['8i', '9i']`.
+- **Verification:** 305 tests passing. All new cell metadata, shot limit, total distance, and extra club scenarios tested. Zero regressions. Commit fb8df34.
+
 ### 2026-03-19 — Outlier Detection API + Hidden Shots + Print Percentile
 - **Outlier detection API:** New `GET /api/shots/suggested-exclusions` endpoint. `detect_outliers()` in analytics.py uses IQR method (Q1 − 1.5×IQR, Q3 + 1.5×IQR) on carry distance and offline (direction) per club. Needs ≥4 shots per club per metric. Returns `{outliers: {club: [{shot_id, reasons, carry, offline, carry_bounds, direction_bounds}]}, total_count, iqr_multiplier}`. Accepts `session_id`, `club` (comma-sep), `date_range`, `iqr_multiplier` params. Outliers sorted by CLUB_ORDER.
 - **Hidden shots backend:** Shots route now accepts `include_hidden` query param (default `false`). When false, filters out `excluded=True` shots before pagination. Returns `hidden_count` (count of excluded shots matching current filters) so frontend can show badge. When `include_hidden=true`, all shots returned with their `excluded` flag visible.
