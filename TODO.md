@@ -32,7 +32,7 @@ can cearly understand the concept~~ DONE
 -~~on the analytics page, the dispersion pattern should always start from 0 on the carry axis. The point is to see the pattern from the POV of the origin point.~~ DONE
 -~~based on analytics data, some shots should be suggested for exclusion. add some type of a "suggested excluded shots" to the shots page that the user can review
 and agree (or disagree) to the exclusion~~ DONE
--on the analytics page does the refresh button serve a purpose?
+-~~on the analytics page does the refresh button serve a purpose?~~ DONE
 -~~for the percentile commentary, do a better job explaining the differences between percentile numbers and why you see the numbers go up when the percentile numbers
 go up.~~ DONE
 -~~on the two matrix cards make the height of the table dynamically determined based on the number of rows~~ DONE
@@ -75,9 +75,9 @@ nothing else. For the Percentile, just show the Percentile with the number, as i
 -~~the club comparison chart: rewrite as box and whisker plot~~ DONE
 -~~my shots vs pga tour average: add per-club dropdown~~ DONE
 -~~for the carry distance, can the chart have distances laid out like they were concentric circles. See this image "C:\Users\ersabine\OneDrive - Microsoft\Documents\Personal\wedgeMatrix\carry_distance_arch.png"~~ DONE
--for the 'club comparisons' and 'launch & spin stability', try the order as follows; 1W, 3W, 2H, 3H, 4H, 3i, 4i, 5i, 6i, 7i, 8i, 9i, PW-Full, AW-Full, SW-Full, LW-Full, AW-3/3, SW-3/3, LW-3/3, AW-2/3, SW-2/3, LW-2/3, AW-1/3, SW-1/3, LW-1/3, SW-10:2, LW-10:2, SW-10:3, LW-10:3, SW-9:3, LW-9:3, SW-8:4, LW-8:4. Note some clubs were mentioned that have not been seen in the data yet.
--the data imported for swing path is being misinterpreted. When preceded with L the swing path is out-to-in. When R, it is in-to-out. In the shot shape analysis the bulk of the data suggests the shots are mostly out-to-in, which is not correct for the user's profile of play.
--the version number should increment every time changes are made
+-~~for the 'club comparisons' and 'launch & spin stability', try the order as follows; 1W, 3W, 2H, 3H, 4H, 3i, 4i, 5i, 6i, 7i, 8i, 9i, PW-Full, AW-Full, SW-Full, LW-Full, AW-3/3, SW-3/3, LW-3/3, AW-2/3, SW-2/3, LW-2/3, AW-1/3, SW-1/3, LW-1/3, SW-10:2, LW-10:2, SW-10:3, LW-10:3, SW-9:3, LW-9:3, SW-8:4, LW-8:4. Note some clubs were mentioned that have not been seen in the data yet.~~ DONE
+-~~the data imported for swing path is being misinterpreted. When preceded with L the swing path is out-to-in. When R, it is in-to-out. In the shot shape analysis the bulk of the data suggests the shots are mostly out-to-in, which is not correct for the user's profile of play.~~ DONE
+-~~the version number should increment every time changes are made~~ DONE
 -~~show a table at the bottom of the analytics page of the PGA tour average details. At present it looks like the numbers are broken.~~ DONE
 -~~for the x axis of Dispersion Pattern, show the same number of yards to the left of 0 as are shown right.~~ DONE
 -~~for the x axis label of Dispersion Pattern, place the words "Offline (Yards)" on a 2nd line of text. Everything should be center-justified and given the TODO above, the pipe should appear directly under the 0.~~ DONE
