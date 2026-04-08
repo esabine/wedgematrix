@@ -42,9 +42,9 @@
 #club-card .pocket-table th { font-size: 13pt; }
 #club-card .pocket-table td { padding: 1.5pt 3pt; }
 
-/* Wedge matrix: 2.91" wide (was 3.06", reduced 5%), height auto */
+/* Wedge matrix: 3.4" wide — needs more room than club card (5 cols vs 4, wider "99/101" values) */
 #wedge-card {
-    width: 2.91in;
+    width: 3.4in;
     font-size: 14pt;
 }
 
