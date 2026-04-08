@@ -348,6 +348,28 @@ Cross-agent coordination:
 
 **Key pattern:** Canvas annotations that represent relationships (gaps, deltas) between data points should be visually positioned between those points, not on either one.
 
+### 2026-04-08 — Wedge Matrix Font Size Match (TODO 94)
+
+**Problem:** The wedge card (`#wedge-card`) font sizes were never restored after the 8i/9i column revert (TODO 92). When those columns were added, font sizes were tightened to `10pt`/`10.5pt` to fit 7 columns. After the revert the card went back to 5 columns (PW, AW, SW, LW + label) but the small fonts remained.
+
+**Print CSS font size structure (print.css):**
+- `.pocket-card` base: `font-size: 13pt` (applies to both cards unless overridden)
+- `#club-card`: `font-size: 14pt` (card-level override)
+- `#club-card .pocket-table`: `font-size: 14pt`
+- `#club-card .pocket-table th`: `font-size: 13pt`
+- `#club-card .pocket-table td`: no explicit font-size (inherits 14pt from table)
+- `.card-footer-row`: `font-size: 10pt` (shared, applies to both cards)
+
+**Fix applied:** Updated `#wedge-card` in `print.css` to match club card sizing exactly:
+- Added `font-size: 14pt` to `#wedge-card` block
+- Added `#wedge-card .pocket-table { font-size: 14pt; }`
+- Changed th from `10pt` → `13pt`, padding `1.5pt 1pt` → `1.5pt 2pt`
+- Removed explicit `font-size: 10.5pt` from td (now inherits 14pt); padding `1pt 1pt` → `1.5pt 3pt`
+- Removed explicit `font-size: 10pt` from `.club-col`; width `24px` → `30px`
+
+**Rule:** Whenever column count changes on the wedge card, always re-evaluate whether the font sizes were deliberately reduced for column-count reasons or are now stale. The wedge card at 5 columns (label + 4 clubs) fits the same 14pt sizing as the 4-column club card.
+
+
 ---
 
 ### Session: TODOs 71-76 (continued)

@@ -45,12 +45,13 @@
 /* Wedge matrix: 2.91" wide (was 3.06", reduced 5%), height auto */
 #wedge-card {
     width: 2.91in;
+    font-size: 14pt;
 }
 
-/* Wedge card: tighter layout for 7-column table (up to 8i/9i/PW/AW/SW/LW) */
-#wedge-card .pocket-table th { font-size: 10pt; padding: 1.5pt 1pt; }
-#wedge-card .pocket-table td { padding: 1pt 1pt; font-size: 10.5pt; }
-#wedge-card .pocket-table .club-col { width: 24px; font-size: 10pt; }
+#wedge-card .pocket-table { font-size: 14pt; }
+#wedge-card .pocket-table th { font-size: 13pt; padding: 1.5pt 2pt; }
+#wedge-card .pocket-table td { padding: 1.5pt 3pt; }
+#wedge-card .pocket-table .club-col { width: 30px; }
 
 .card-header-row {
     display: flex;

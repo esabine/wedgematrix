@@ -8,7 +8,7 @@ from flask import (
 )
 
 # Auto-incremented by bump_version.py. Run manually or via .githooks/pre-commit.
-VERSION = '0.6.2'
+VERSION = '0.6.3'
 from config import Config
 from models.database import db, Session, Shot, ClubLoft, init_db
 from models.seed import seed_club_lofts

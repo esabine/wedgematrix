@@ -91,3 +91,4 @@ nothing else. For the Percentile, just show the Percentile with the number, as i
 -~~on the printed wedge matrix card, add the total (as in carry/total) like we're doing with the clock shots~~ DONE
 -~~on the printed wedge matrix card, add columns for 9 iron and 8 iron~~ DONE
 -~~remove 8i and 9i from the printed wedge matrix~~ DONE
+-~~the font size on the wedge matrix should match that of the iron matrix~~ DONE
