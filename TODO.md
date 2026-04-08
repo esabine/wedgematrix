@@ -90,3 +90,4 @@ nothing else. For the Percentile, just show the Percentile with the number, as i
 -~~on both the wedge matrix and club matrix pages I want a field that I can type in the number of shots to limit each number's population to, for example if I enter 30, then for every individual calculation, only the most recent 30 shots for that club and swing type calculation should be used. The percentiles are still applicable, so if I had selected 30 for the count and P75, then show the 75th percentile of those 30 most recent shots for the club & swing type combo.~~ DONE
 -~~on the printed wedge matrix card, add the total (as in carry/total) like we're doing with the clock shots~~ DONE
 -~~on the printed wedge matrix card, add columns for 9 iron and 8 iron~~ DONE
+-~~remove 8i and 9i from the printed wedge matrix~~ DONE

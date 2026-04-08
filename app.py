@@ -8,7 +8,7 @@ from flask import (
 )
 
 # Auto-incremented by bump_version.py. Run manually or via .githooks/pre-commit.
-VERSION = '0.6.1'
+VERSION = '0.6.2'
 from config import Config
 from models.database import db, Session, Shot, ClubLoft, init_db
 from models.seed import seed_club_lofts
@@ -21,7 +21,7 @@ from services.analytics import (
     compute_dispersion_boundary, PGA_AVERAGES,
 )
 from services.club_matrix import build_club_matrix, CLUB_ORDER, club_sort_key
-from services.wedge_matrix import build_wedge_matrix, SWING_SIZES, WEDGE_CLUBS, PRINT_WEDGE_CLUBS
+from services.wedge_matrix import build_wedge_matrix, SWING_SIZES, WEDGE_CLUBS
 from services.loft_analysis import analyze_loft, loft_summary
 
 DATE_RANGE_DAYS = {'7': 7, '30': 30, '60': 60, '90': 90}
@@ -370,8 +370,7 @@ def register_routes(app):
     def print_wedge_matrix():
         session_id = request.args.get('session_id', type=int)
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
-        data = build_wedge_matrix(session_id=session_id, percentile=percentile,
-                                  extra_full_clubs=['8i', '9i'])
+        data = build_wedge_matrix(session_id=session_id, percentile=percentile)
         return render_template('print_card.html',
                                club_matrix=[],
                                wedge_matrix=data['matrix'],
@@ -383,8 +382,7 @@ def register_routes(app):
         session_id = request.args.get('session_id', type=int)
         percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
         cm = build_club_matrix(session_id=session_id, percentile=percentile)
-        wd = build_wedge_matrix(session_id=session_id, percentile=percentile,
-                                extra_full_clubs=['8i', '9i'])
+        wd = build_wedge_matrix(session_id=session_id, percentile=percentile)
         return render_template('print_card.html',
                                club_matrix=cm,
                                wedge_matrix=wd['matrix'],
