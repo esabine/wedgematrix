@@ -181,10 +181,27 @@ When `|offline| >= carry` (physically impossible data):
 - Clock cells: `{carry, total, max, shot_count, oldest_date}`
 - Print template uses `cell.total` in `{carry}/{total}` display format
 
-### TODO 92: Print Card Extra Clubs (8i, 9i)
-- `build_wedge_matrix()` accepts `extra_full_clubs` list parameter
-- Full-swing shots for 8i and 9i are mapped to '3/3' row
-- Print routes automatically pass `extra_full_clubs=['8i', '9i']`
-- Template receives extended `wedge_clubs` variable; print CSS adjusted to fit new columns
+### TODO 92: Print Card Extra Clubs (8i, 9i) — LATER REVERSED
+- ~~`build_wedge_matrix()` accepts `extra_full_clubs` list parameter~~
+- ~~Full-swing shots for 8i and 9i are mapped to '3/3' row~~
+- ~~Print routes automatically pass `extra_full_clubs=['8i', '9i']`~~
+- ~~Template receives extended `wedge_clubs` variable; print CSS adjusted to fit new columns~~
+- **See: Remove 8i/9i from Printed Wedge Matrix (2026-04-08)** — user reversed this decision; printed card returns to PW/AW/SW/LW only
 
 **Verification:** 305 tests passing, zero regressions. Frontend (McManus) implements tooltip initialization, shot limit input UI, carry/total display, and column rendering.
+
+---
+
+## Remove 8i/9i from Printed Wedge Matrix
+
+**Date:** 2026-04-08 | **Author:** McManus | **Status:** Implemented
+
+**Context:** TODO 92 added 8i and 9i as extra columns on the printed wedge matrix. User has now reversed this decision.
+
+**Changes:**
+- `app.py`: Removed `extra_full_clubs=['8i', '9i']` from both `print_wedge_matrix` and `print_pocket_card` route calls to `build_wedge_matrix()`
+- `app.py`: Removed dead `PRINT_WEDGE_CLUBS` import from `services.wedge_matrix`
+- `services/wedge_matrix.py`: `PRINT_WEDGE_CLUBS` constant remains (available for future non-print use), but no longer imported or used by the app
+- Version bumped to 0.6.2
+
+**Rule Going Forward:** To add or remove iron columns from the printed wedge matrix, modify `extra_full_clubs` in `app.py` at the `print_wedge_matrix` and `print_pocket_card` routes. The template is fully data-driven from `wedge_clubs` — no template changes needed.

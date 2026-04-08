@@ -335,6 +335,14 @@ Cross-agent coordination:
 - Shot limit input firing reload with query parameter
 - Print card displaying carry/total format (Jinja2 conditional fallback to carry/max)
 - Print card columns extended: 8i, 9i added; CSS tightened for 7-column wedge layout
+
+**2026-04-08 — Revert TODO 92: Remove 8i/9i from Printed Wedge Matrix:**
+- User decision: revert the 8i/9i column addition to printed wedge card
+- Removed `extra_full_clubs=['8i', '9i']` parameter from both `print_wedge_matrix` and `print_pocket_card` routes in `app.py`
+- Removed dead `PRINT_WEDGE_CLUBS` import from app.py; constant remains in services/wedge_matrix.py for future non-print use
+- Print card returns to 4-wedge display (PW, AW, SW, LW only)
+- Version bumped to 0.6.2
+- No template changes needed — design is fully data-driven from `wedge_clubs` variable in context
 - 305 tests passing, zero regressions
 - Commit: (coordinated batch with Fenster's fb8df34)
 
@@ -465,3 +473,9 @@ Template: 	emplates/analytics/dispersion.html updated to include these fields in
 **TODO 84 — Per-club shot shape:** Rewrote `initShotShape` from single green dataset to per-club grouped scatter (same pattern as dispersion/spin). Each club gets own dataset with `getClubColor`. Tooltip now shows club name + path/face/shape. Legend enabled at right position.
 
 **TODO 81 — PGA Tour Average table:** Added Bootstrap card with `table-golf` header at bottom of analytics.html. `loadPGAAverages()` in charts.js fetches `/api/analytics/pga-averages` once on page load (not on every filter change — PGA data is static reference). Loading spinner + graceful error handling.
+
+### 2026-03-26 — Remove 8i/9i from Printed Wedge Matrix
+
+**TODO 93 — Remove 8i/9i columns:** The 8i/9i columns on the printed wedge matrix were driven entirely by the `extra_full_clubs=['8i', '9i']` argument passed to `build_wedge_matrix()` in two routes (`print_wedge_matrix` and `print_pocket_card`). Removing that argument is all that was needed — the template already iterates `wedge_clubs` from the route context, so no template change was required. Also cleaned up the now-dead `PRINT_WEDGE_CLUBS` import in `app.py`.
+
+**Key pattern:** Extra/optional clubs on the printed wedge matrix are controlled at the route layer via `extra_full_clubs`, not in the template. The template is fully data-driven from `wedge_clubs`. Future requests to add or remove iron columns from the print card only require changing the `extra_full_clubs` argument (or omitting it).

@@ -20,6 +20,7 @@ Agent Scribe maintains orchestration logs, session logs, decision archives, and 
 📌 Team initialized on 2026-03-14
 📌 Team cast from The Usual Suspects: Keaton (Lead), Fenster (Backend), McManus (Frontend), Hockney (Tester)
 📌 Batch 11 completed (2026-03-26): Fenster + McManus implemented TODOs 89–92 (matrix metadata, shot limit, print enhancements, 8i/9i columns)
+📌 2026-04-08: McManus reverted 8i/9i column addition from printed wedge matrix per user request
 
 ## Learnings
 
