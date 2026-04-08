@@ -501,3 +501,9 @@ Template: 	emplates/analytics/dispersion.html updated to include these fields in
 **TODO 93 — Remove 8i/9i columns:** The 8i/9i columns on the printed wedge matrix were driven entirely by the `extra_full_clubs=['8i', '9i']` argument passed to `build_wedge_matrix()` in two routes (`print_wedge_matrix` and `print_pocket_card`). Removing that argument is all that was needed — the template already iterates `wedge_clubs` from the route context, so no template change was required. Also cleaned up the now-dead `PRINT_WEDGE_CLUBS` import in `app.py`.
 
 **Key pattern:** Extra/optional clubs on the printed wedge matrix are controlled at the route layer via `extra_full_clubs`, not in the template. The template is fully data-driven from `wedge_clubs`. Future requests to add or remove iron columns from the print card only require changing the `extra_full_clubs` argument (or omitting it).
+
+### 2026-03-28 — Widen Printed Wedge Matrix
+
+**Wedge card vs club card sizing:** The club matrix (`#club-card`) prints at 2.91" with 4 columns (CLUB, CARRY, TOTAL, MAX) and single integer values (e.g., "145"). The wedge matrix (`#wedge-card`) has 5 columns (swing label + PW, AW, SW, LW) with paired carry/total values like "67/67" or "99/101" — those cells are significantly wider character-for-character. 2.91" caused the rightmost LW column to clip on every row. Widened `#wedge-card` to 3.4" (~17% increase) to give all 5 columns breathing room. Club card stays at 2.91". Both cards still fit on a single letter sheet portrait with cut guides between them.
+
+**Screen preview label:** The `card-label` div in `print_card.html` shows the width as a text hint for screen preview. Updated from "2.91″" to "3.4″" to match the new CSS rule so the on-screen preview label stays truthful.
