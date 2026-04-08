@@ -233,3 +233,19 @@ The `#wedge-card` font sizes were reduced to `10pt`/`10.5pt` in TODO 92 to accom
 - `print.css` updated: `#wedge-card` now matches `#club-card` sizing exactly
 - No template changes needed
 - Version bumped to 0.6.3
+
+---
+
+## Wedge Matrix Print Width = 3.4"
+
+**Date:** 2026-03-28  
+**Author:** McManus  
+**Status:** Implemented  
+
+`#wedge-card` print width increased from 2.91" to 3.4". `#club-card` remains at 2.91".
+
+The wedge matrix has 5 print columns (swing-size label + PW + AW + SW + LW). The club matrix has 4 (Club + Carry + Total + Max). Wedge cell values like "67/67" and "99/101" are wider than the integer carry distances in the club card. At 2.91" the LW column was clipped on every row. 3.4" (~17% wider than club card) gives all 5 columns room without crowding. Both cards continue to fit on a single letter-size page with dashed cut guides.
+
+**Rule:** Club card stays at 2.91". Wedge card stays at 3.4". Any future column additions to the wedge card (e.g., adding irons back) require a re-evaluation of this width upward, not downward.
+
+**Version:** 0.6.4
