@@ -205,3 +205,31 @@ When `|offline| >= carry` (physically impossible data):
 - Version bumped to 0.6.2
 
 **Rule Going Forward:** To add or remove iron columns from the printed wedge matrix, modify `extra_full_clubs` in `app.py` at the `print_wedge_matrix` and `print_pocket_card` routes. The template is fully data-driven from `wedge_clubs` — no template changes needed.
+
+---
+
+## Wedge Card Font Sizes Track Column Count
+
+**Date:** 2026-04-08  
+**Author:** McManus  
+**Status:** Implemented  
+
+### Context
+
+The `#wedge-card` font sizes were reduced to `10pt`/`10.5pt` in TODO 92 to accommodate 7 columns (8i, 9i, PW, AW, SW, LW + label). After TODO 93 reverted the 8i/9i addition, the card returned to 5 columns (label + PW, AW, SW, LW) but the small fonts were not restored. This left the wedge matrix visibly smaller than the club matrix at print time.
+
+### Decision
+
+**The wedge card should always use the same font sizes as the club card when both have the same column count (≤5).** Font size reductions on the wedge card are only justified when column count exceeds 5.
+
+### Rule
+
+- ≤ 5 columns: use club-card sizes (`14pt` card, `14pt` table, `13pt` th, inherited `14pt` td)
+- 6–7 columns: reduce — use `10pt`/`10.5pt` (or re-evaluate to fit)
+- Any time wedge column count changes, reassess font sizes explicitly — do not leave stale small fonts from a prior column-count era
+
+### Impact
+
+- `print.css` updated: `#wedge-card` now matches `#club-card` sizing exactly
+- No template changes needed
+- Version bumped to 0.6.3
