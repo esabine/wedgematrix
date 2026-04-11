@@ -341,3 +341,35 @@ The shotpattern app requires a specific 5-column CSV format with individual shot
 - Target distance (90% of max carry per club) follows industry convention for safe shot planning
 - Individual shot export provides granular data for better pattern visualization
 - Date range and session filtering provide flexibility for users
+
+---
+
+## Shotpattern CSV Export Row Limit: 35 per Club, 500 Max
+
+**Date:** 2026-04-11 | **Author:** Fenster | **Status:** Implemented
+
+Optimized `/api/export/shotpattern` to prevent oversized CSV exports when importing into the shotpattern iPhone app.
+
+### Problem
+
+With 14+ clubs and potentially hundreds of shots per club, the shotpattern export could generate unbounded row counts, causing performance issues or app-side rejection.
+
+### Solution
+
+- **Per-club limit:** Each club limited to its 35 most recent shots (by shot.id descending)
+- **Global hard cap:** Total CSV rows capped at 500 as a safety valve
+- **Max-carry recomputation:** `Target` column (90% of max carry per club) computed from the filtered 35-per-club set, reflecting recent performance rather than all-time max
+- **Filtering during grouping pass:** Compound clubs and null-carry shots removed before the 35-shot limit is applied
+
+### Impact
+
+- With 14 standard clubs × 35 = 490 max rows, the 500 cap rarely triggers except with non-standard clubs
+- Recent shot data prioritized for pattern analysis
+- Existing query filters (date_range, session_id, percentile, include_test) remain upstream and unaffected
+- All 314 tests pass; no regressions
+
+### Verification
+
+- Per-club grouping validated with multiple shot counts per club
+- 500-row hard cap verified
+- max_carry correctness confirmed on filtered datasets

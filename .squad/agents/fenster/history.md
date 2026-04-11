@@ -441,3 +441,24 @@ Paired with Hockney's 27 correctness, edge case, integration, and regression tes
 - Empty values rendered as blank string in CSV
 - Preserved sign on Side column (negative = left, positive = right)
 
+### 2026-04-11 — Shotpattern Export Row Limits
+
+**Feature:** Added per-club and total row limits to `/api/export/shotpattern`.
+
+**Changes:**
+- Each club capped at 35 most recent shots (by shot.id descending).
+- Total CSV output capped at 500 rows.
+- Compound clubs (containing '-') and null-carry shots filtered early in the grouping pass.
+- max_carry_per_club computed from the filtered (35-per-club) set, not the full query.
+- Final output sorted by club_sort_key then shot.id, consistent with prior behavior.
+- Constants: MAX_SHOTS_PER_CLUB = 35, MAX_TOTAL_ROWS = 500.
+- Existing filters (date_range, percentile, session_id, include_test) unchanged.
+
+**Design decision:** Per-club limit applied before sorting and before max_carry computation. This means the Target column reflects recent performance, not all-time max. The 500-row cap is a safety valve — with 14 clubs × 35 = 490, it only triggers if more clubs appear.
+
+
+### 2026-04-11 — Shotpattern Export Row Limit
+- **Task:** Limit /api/export/shotpattern CSV output per-club to 35 most recent shots, 500 total rows max.
+- **Implementation:** Two-pass algorithm groups shots by club, sorts by shot.id descending, applies 35-shot cap per club. Total rows hard-capped at 500. Compound clubs and null-carry shots filtered during grouping. Target (90% of max_carry) recomputed from filtered set.
+- **Impact:** Prevents oversized CSV exports when importing into shotpattern iPhone app. With 14 clubs × 35 = 490 max rows, 500 cap acts as safety valve. Recent shot data prioritized for pattern analysis.
+- **Testing:** All 314 tests passing; no regressions. Edge cases: varying shot counts per club, empty clubs, non-standard clubs, carry values on boundary conditions.

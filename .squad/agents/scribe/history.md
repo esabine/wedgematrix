@@ -28,3 +28,8 @@ Agent Scribe maintains orchestration logs, session logs, decision archives, and 
 - Decision merging: identify duplicates by date/author, preserve implementation status, add cross-agent notes where relevant
 - Orchestration logs: brief outcome summary, metrics (tests passing), technical impact, commit reference
 - History updates: append to existing learnings, reference cross-agent dependencies, note verification status
+
+### 2026-04-11 — Fenster Shotpattern Export Row Limit Documentation
+- **Task:** Orchestrate completion of Fenster's shotpattern CSV export row-limiting feature
+- **Actions:** Wrote orchestration log (2026-04-11T034913Z-fenster.md), session log (2026-04-11T034913Z-shotpattern-row-limit.md), merged decision inbox into decisions.md (new "Shotpattern CSV Export Row Limit" entry), updated Fenster's history.md with learnings
+- **Outcome:** All squad documentation synchronized. Decision archived. No manual edits or conflicts.
