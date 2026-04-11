@@ -415,3 +415,29 @@ Paired with Hockney's 27 correctness, edge case, integration, and regression tes
 - Import added to app.py imports alongside other wedge_matrix exports.
 
 **Testing:** Verified export output produces correct CSV structure with proper club name mapping for all club types (woods, hybrids, irons, wedges).
+
+### 2026-04-11 — Shotpattern CSV Export Endpoint
+
+**Feature:** Replaced /api/wedge-matrix/export with /api/export/shotpattern endpoint tailored for shotpattern iPhone app.
+
+**Changes:**
+- Removed old /api/wedge-matrix/export route (lines 578-624 in app.py)
+- Created new /api/export/shotpattern endpoint producing 5-column CSV:
+  - Club: export_club_name() mapping (1W→Dr, *H→*Hy)
+  - Type: "Tee" for woods (*W), "Approach" for all others
+  - Target: max(carry) * 0.9, rounded
+  - Total: percentile_value(totals, percentile), rounded
+  - Side: percentile_value(offlines, percentile), rounded, signed
+- Data filtering: full swing shots only (swing_size == 'full'), non-excluded, all clubs (not just wedges)
+- Query params: session_id, percentile (default 75), date_range (7/30/60/90), include_test (default false)
+- Filename: shotpatternYYYYMMDD.csv with today's date
+- Uses get_shots_query() from services.analytics for proper filtering
+- Clubs ordered via CLUB_ORDER from club_matrix.py
+- Added percentile_value import from services.analytics
+
+**Implementation details:**
+- Grouped shots by club_short in memory (efficient for full-swing subset)
+- Filtered CLUB_ORDER to skip composite keys (e.g., 'PW-full', 'AW-3/3')
+- Empty values rendered as blank string in CSV
+- Preserved sign on Side column (negative = left, positive = right)
+

@@ -514,3 +514,13 @@ Template: 	emplates/analytics/dispersion.html updated to include these fields in
 - Used direct URL construction (not url_for) to avoid Jinja errors if backend route is not registered yet
 - Matches Print Card styling: btn btn-outline-secondary with bi-download icon
 - Coordinate with Fenster's API endpoint implementation
+
+### 2026-03-28 — Export CSV Button URL Changes
+- **Wedge matrix export updated:** Changed export button URL from /api/wedge-matrix/export to /api/export/shotpattern. Kept all existing query params (percentile, session_id, shot_limit).
+- **Analytics page export added:** Added Export CSV button to analytics page header next to the "Analytics" title. Button uses JavaScript-driven URL builder (xportShotpattern()) that reads current filter state from hidden inputs:
+  - #analytics-session → session_id
+  - #analytics-percentile → percentile (default 75)
+  - #analytics-date-range → date_range
+- **Pattern:** Analytics page uses JS-driven filters (no form selects), so export button must build URL dynamically on click rather than using static href template params.
+- **Styling:** Both buttons use tn btn-outline-secondary with i-download icon for consistency.
+- Coordinates with Fenster's API endpoint consolidation (one unified /api/export/shotpattern endpoint instead of separate wedge-matrix and analytics exports).
