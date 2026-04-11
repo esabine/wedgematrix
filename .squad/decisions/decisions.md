@@ -295,43 +295,49 @@ Replaced the generic `/api/wedge-matrix/export` endpoint with a purpose-specific
 
 ### Context
 
-The shotpattern app requires a specific 5-column CSV format with aggregated club statistics. The previous wedge matrix export was designed for wedge-specific swing size analysis and didn't match the app's requirements.
+The shotpattern app requires a specific 5-column CSV format with individual shot rows. The initial implementation exported aggregated club statistics, but this was revised to provide granular shot-level data.
 
-### Format Specification
+### Format Specification (Revised)
 
 **Columns:**
 1. **Club** — export_club_name() mapping (1W→Dr, *H→*Hy, others as-is)
-2. **Type** — "Tee" for woods (ends with W), "Approach" for all others
-3. **Target** — max(carry) * 0.9, rounded
-4. **Total** — percentile_value(totals, percentile), rounded
-5. **Side** — percentile_value(offlines, percentile), rounded, signed
+2. **Type** — "Tee" for 1W/3W only, "Approach" for all others
+3. **Target** — max(carry per club) * 0.9, rounded (club-level)
+4. **Total** — individual shot total distance, rounded
+5. **Side** — individual shot offline distance, rounded, signed
 
 **Data selection:**
 - Full swing shots only (swing_size == 'full')
 - Non-excluded shots
 - All clubs (not just wedges), ordered by CLUB_ORDER
-- One row per club (aggregated)
+- One row per individual shot (not aggregated)
 
 **Query parameters:**
 - `session_id` (optional) — filter to specific session
-- `percentile` (optional, default 75) — for Total and Side calculations
+- `percentile` (optional, default 75) — accepted for backward compatibility but not used
 - `date_range` (optional) — "7", "30", "60", "90" for date filtering
 - `include_test` (optional, default false) — include/exclude test sessions
 
 **Filename:** `shotpatternYYYYMMDD.csv` where YYYYMMDD is today's date
 
-### Implementation
+### Implementation Details
 
+- Two-pass algorithm: first computes max_carry per club, second outputs individual shot rows
+- Shots sorted by club_sort_key, then by shot ID for consistent ordering
 - Uses `get_shots_query()` from services.analytics for consistent filtering
-- Groups shots by club_short in memory (efficient for full-swing subset)
-- Iterates CLUB_ORDER, skipping composite keys (e.g., 'PW-full')
 - Reuses existing `export_club_name()` from services.wedge_matrix
-- Imported `percentile_value` from services.analytics
+- Removed `percentile_value` aggregation logic (no longer needed)
+
+### Changes from Initial Implementation
+
+- **Type classification fix:** Now correctly identifies only 1W and 3W as "Tee" (was incorrectly catching PW/AW/SW/LW)
+- **Data granularity:** Changed from one row per club (aggregated) to one row per individual shot (granular)
+- **Rationale:** Enables shot-by-shot pattern analysis with club-level targets as benchmarks
 
 ### Rationale
 
-- Specific endpoint name (`/api/export/shotpattern`) better communicates purpose
+- Specific endpoint name (`/api/export/shotpattern`) communicates purpose clearly
 - Full-swing-only filter aligns with shotpattern app use case
-- Target distance (90% of max carry) follows industry convention for safe shot planning
-- Percentile-based Total/Side provides consistency with other analytics endpoints
+- Target distance (90% of max carry per club) follows industry convention for safe shot planning
+- Individual shot export provides granular data for better pattern visualization
 - Date range and session filtering provide flexibility for users
