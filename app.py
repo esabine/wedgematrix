@@ -8,7 +8,7 @@ from flask import (
 )
 
 # Auto-incremented by bump_version.py. Run manually or via .githooks/pre-commit.
-VERSION = '0.6.7'
+VERSION = '0.6.8'
 from config import Config
 from models.database import db, Session, Shot, ClubLoft, init_db
 from models.seed import seed_club_lofts
@@ -587,6 +587,9 @@ def register_routes(app):
         date_range = request.args.get('date_range')
         date_from = parse_date_range(date_range)
         
+        MAX_SHOTS_PER_CLUB = 35
+        MAX_TOTAL_ROWS = 500
+
         # Query full swing shots only
         shots = get_shots_query(
             session_id=session_id,
@@ -596,20 +599,34 @@ def register_routes(app):
             include_test=include_test
         ).all()
         
-        # First pass: compute max carry per club
-        max_carry_per_club = {}
+        # Group by club, keep only the most recent 35 per club (highest shot.id)
+        from collections import defaultdict
+        club_groups = defaultdict(list)
         for shot in shots:
             club = shot.club_short
-            if '-' in club:
+            if '-' in club or shot.carry is None:
                 continue
-            if shot.carry is not None:
-                if club not in max_carry_per_club:
-                    max_carry_per_club[club] = shot.carry
-                else:
-                    max_carry_per_club[club] = max(max_carry_per_club[club], shot.carry)
+            club_groups[club].append(shot)
         
-        # Sort shots by club order, then by shot.id
-        sorted_shots = sorted(shots, key=lambda s: (club_sort_key(s.club_short), s.id))
+        filtered_shots = []
+        for club, club_shots in club_groups.items():
+            club_shots.sort(key=lambda s: s.id, reverse=True)
+            filtered_shots.extend(club_shots[:MAX_SHOTS_PER_CLUB])
+        
+        # Compute max carry per club from the filtered set
+        max_carry_per_club = {}
+        for shot in filtered_shots:
+            club = shot.club_short
+            if club not in max_carry_per_club:
+                max_carry_per_club[club] = shot.carry
+            else:
+                max_carry_per_club[club] = max(max_carry_per_club[club], shot.carry)
+        
+        # Sort by club order, then by shot.id for final output
+        sorted_shots = sorted(filtered_shots, key=lambda s: (club_sort_key(s.club_short), s.id))
+        
+        # Cap at 500 total rows
+        sorted_shots = sorted_shots[:MAX_TOTAL_ROWS]
         
         # Build CSV
         output = io.StringIO()
@@ -618,15 +635,6 @@ def register_routes(app):
         
         for shot in sorted_shots:
             club = shot.club_short
-            
-            # Skip compound club names
-            if '-' in club:
-                continue
-            
-            # Skip if no carry (can't compute target)
-            if shot.carry is None:
-                continue
-            
             club_name = export_club_name(club)
             shot_type = 'Tee' if club in ('1W', '3W') else 'Approach'
             target = round(max_carry_per_club[club] * 0.9)
