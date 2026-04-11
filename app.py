@@ -8,7 +8,7 @@ from flask import (
 )
 
 # Auto-incremented by bump_version.py. Run manually or via .githooks/pre-commit.
-VERSION = '0.6.4'
+VERSION = '0.6.5'
 from config import Config
 from models.database import db, Session, Shot, ClubLoft, init_db
 from models.seed import seed_club_lofts
@@ -21,7 +21,7 @@ from services.analytics import (
     compute_dispersion_boundary, PGA_AVERAGES,
 )
 from services.club_matrix import build_club_matrix, CLUB_ORDER, club_sort_key
-from services.wedge_matrix import build_wedge_matrix, SWING_SIZES, WEDGE_CLUBS
+from services.wedge_matrix import build_wedge_matrix, SWING_SIZES, WEDGE_CLUBS, export_club_name
 from services.loft_analysis import analyze_loft, loft_summary
 
 DATE_RANGE_DAYS = {'7': 7, '30': 30, '60': 60, '90': 90}
@@ -574,6 +574,54 @@ def register_routes(app):
         include_test = request.args.get('include_test', 'false').lower() == 'true'
         data = build_wedge_matrix(session_id=session_id, percentile=percentile, include_test=include_test)
         return jsonify({'percentile': percentile, 'session_id': session_id, **data})
+
+    @app.route('/api/wedge-matrix/export')
+    def api_wedge_matrix_export():
+        import csv
+        import io
+        from flask import make_response
+        
+        session_id = request.args.get('session_id', type=int)
+        percentile = request.args.get('percentile', Config.DEFAULT_PERCENTILE, type=int)
+        include_test = request.args.get('include_test', 'false').lower() == 'true'
+        shot_limit = request.args.get('shot_limit', type=int)
+        
+        data = build_wedge_matrix(
+            session_id=session_id,
+            percentile=percentile,
+            include_test=include_test,
+            shot_limit=shot_limit
+        )
+        
+        clubs = data['clubs']
+        matrix = data['matrix']
+        swing_sizes = data['swing_sizes']
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        header = ['Swing Size'] + [export_club_name(club) for club in clubs]
+        writer.writerow(header)
+        
+        for size in swing_sizes:
+            row = [size]
+            for club in clubs:
+                cell = matrix[size].get(club)
+                if cell is None:
+                    row.append('')
+                else:
+                    carry = cell.get('carry', '')
+                    if size in {'10:2', '10:3', '9:3', '8:4'}:
+                        max_carry = cell.get('max', '')
+                        row.append(f"{carry}/{max_carry}" if carry and max_carry else '')
+                    else:
+                        row.append(str(carry) if carry else '')
+            writer.writerow(row)
+        
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = 'attachment; filename="wedge_matrix.csv"'
+        return response
 
     @app.route('/api/analytics/pga-averages')
     def api_pga_averages():

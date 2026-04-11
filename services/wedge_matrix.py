@@ -17,6 +17,15 @@ WEDGE_CLUBS = ['PW', 'AW', 'SW', 'LW']
 PRINT_WEDGE_CLUBS = ['8i', '9i', 'PW', 'AW', 'SW', 'LW']
 
 
+def export_club_name(club_short):
+    """Translate internal club_short to export-friendly name."""
+    if club_short == '1W':
+        return 'Dr'
+    if club_short.endswith('H'):
+        return club_short[:-1] + 'Hy'
+    return club_short
+
+
 def _session_date_lookup(shots):
     """Build {session_id: session_date} lookup from a list of shots."""
     sids = {s.session_id for s in shots}
