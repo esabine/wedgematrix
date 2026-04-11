@@ -8,7 +8,7 @@ from flask import (
 )
 
 # Auto-incremented by bump_version.py. Run manually or via .githooks/pre-commit.
-VERSION = '0.6.6'
+VERSION = '0.6.7'
 from config import Config
 from models.database import db, Session, Shot, ClubLoft, init_db
 from models.seed import seed_club_lofts
@@ -18,7 +18,7 @@ from services.analytics import (
     dispersion_data, spin_vs_carry_data, shot_shape_data,
     carry_distribution, get_shots_query, detect_outliers,
     launch_spin_stability, radar_comparison,
-    compute_dispersion_boundary, PGA_AVERAGES, percentile_value,
+    compute_dispersion_boundary, PGA_AVERAGES,
 )
 from services.club_matrix import build_club_matrix, CLUB_ORDER, club_sort_key
 from services.wedge_matrix import build_wedge_matrix, SWING_SIZES, WEDGE_CLUBS, export_club_name
@@ -596,42 +596,42 @@ def register_routes(app):
             include_test=include_test
         ).all()
         
-        # Group by club
-        club_data = {}
+        # First pass: compute max carry per club
+        max_carry_per_club = {}
         for shot in shots:
             club = shot.club_short
-            if club not in club_data:
-                club_data[club] = {'carries': [], 'totals': [], 'offlines': []}
-            
+            if '-' in club:
+                continue
             if shot.carry is not None:
-                club_data[club]['carries'].append(shot.carry)
-            if shot.total is not None:
-                club_data[club]['totals'].append(shot.total)
-            if shot.offline is not None:
-                club_data[club]['offlines'].append(shot.offline)
+                if club not in max_carry_per_club:
+                    max_carry_per_club[club] = shot.carry
+                else:
+                    max_carry_per_club[club] = max(max_carry_per_club[club], shot.carry)
+        
+        # Sort shots by club order, then by shot.id
+        sorted_shots = sorted(shots, key=lambda s: (club_sort_key(s.club_short), s.id))
         
         # Build CSV
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(['Club', 'Type', 'Target', 'Total', 'Side'])
         
-        for club in CLUB_ORDER:
-            # Only base club names for full swings
+        for shot in sorted_shots:
+            club = shot.club_short
+            
+            # Skip compound club names
             if '-' in club:
                 continue
-                
-            if club not in club_data:
-                continue
             
-            data = club_data[club]
-            if not data['carries']:
+            # Skip if no carry (can't compute target)
+            if shot.carry is None:
                 continue
             
             club_name = export_club_name(club)
-            shot_type = 'Tee' if club.endswith('W') else 'Approach'
-            target = round(max(data['carries']) * 0.9)
-            total = round(percentile_value(data['totals'], percentile)) if data['totals'] else ''
-            side = round(percentile_value(data['offlines'], percentile)) if data['offlines'] else ''
+            shot_type = 'Tee' if club in ('1W', '3W') else 'Approach'
+            target = round(max_carry_per_club[club] * 0.9)
+            total = round(shot.total) if shot.total is not None else ''
+            side = round(shot.offline) if shot.offline is not None else ''
             
             writer.writerow([club_name, shot_type, target, total, side])
         
