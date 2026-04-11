@@ -249,3 +249,36 @@ The wedge matrix has 5 print columns (swing-size label + PW + AW + SW + LW). The
 **Rule:** Club card stays at 2.91". Wedge card stays at 3.4". Any future column additions to the wedge card (e.g., adding irons back) require a re-evaluation of this width upward, not downward.
 
 **Version:** 0.6.4
+
+---
+
+## CSV Export for Wedge Matrix
+
+**Date:** 2026-04-11 | **Author:** Fenster | **Status:** Implemented
+
+Added CSV export functionality for the wedge matrix with two components:
+
+1. **Export Name Mapping Function** (`export_club_name()` in `services/wedge_matrix.py`):
+   - Translates internal club_short names to export-friendly format
+   - `1W` → `Dr` (Driver)
+   - Clubs ending in `H` → suffix with `Hy` (e.g., `2H` → `2Hy`)
+   - All other clubs remain unchanged
+
+2. **CSV Export Endpoint** (`/api/wedge-matrix/export` in `app.py`):
+   - Accepts same query params as existing `/api/wedge-matrix`: `session_id`, `percentile`, `include_test`, `shot_limit`
+   - Generates CSV with swing sizes as rows, clubs as columns
+   - Fraction sizes (3/3, 2/3, 1/3): show carry only
+   - Clock sizes (10:2, 10:3, 9:3, 8:4): show carry/max format
+   - Returns downloadable CSV file with proper headers
+
+**Rationale:**
+- **Export name mapping** improves readability for external consumption (spreadsheets, sharing with coaches)
+- **Consistent with UI display**: Clock sizes show carry/max matching what users see in the web interface
+- **No new dependencies**: Uses Python's built-in `csv` and `io.StringIO` modules
+- **Cohesive placement**: Export function lives in `services/wedge_matrix.py` alongside matrix logic
+
+**Impact:**
+- Frontend can link to this endpoint for "Export to CSV" functionality
+- Users can download wedge matrix data for offline analysis
+- Export format is human-readable and spreadsheet-friendly
+- Future club types (if added) automatically inherit the export naming convention

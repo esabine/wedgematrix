@@ -507,3 +507,10 @@ Template: 	emplates/analytics/dispersion.html updated to include these fields in
 **Wedge card vs club card sizing:** The club matrix (`#club-card`) prints at 2.91" with 4 columns (CLUB, CARRY, TOTAL, MAX) and single integer values (e.g., "145"). The wedge matrix (`#wedge-card`) has 5 columns (swing label + PW, AW, SW, LW) with paired carry/total values like "67/67" or "99/101" — those cells are significantly wider character-for-character. 2.91" caused the rightmost LW column to clip on every row. Widened `#wedge-card` to 3.4" (~17% increase) to give all 5 columns breathing room. Club card stays at 2.91". Both cards still fit on a single letter sheet portrait with cut guides between them.
 
 **Screen preview label:** The `card-label` div in `print_card.html` shows the width as a text hint for screen preview. Updated from "2.91″" to "3.4″" to match the new CSS rule so the on-screen preview label stays truthful.
+
+### 2026-03-25 — Wedge Matrix Export CSV Button
+- Added "Export CSV" button to wedge_matrix.html action bar (next to Print Card)
+- Button links to /api/wedge-matrix/export with same query params as Print Card: percentile, session_id, shot_limit
+- Used direct URL construction (not url_for) to avoid Jinja errors if backend route is not registered yet
+- Matches Print Card styling: btn btn-outline-secondary with bi-download icon
+- Coordinate with Fenster's API endpoint implementation

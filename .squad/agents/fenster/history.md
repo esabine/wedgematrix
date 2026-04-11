@@ -383,3 +383,35 @@ Paired with Hockney's 27 correctness, edge case, integration, and regression tes
 - `extra_full_clubs` approach keeps wedge matrix function general — any club can be injected into the 3/3 row.
 
 **Test Score:** 305 passing (excluding 3 pre-existing loft_analysis failures). No regressions.
+
+## Learnings
+
+### 2026-03-25 — CSV Export for Wedge Matrix
+
+**Feature:** Added /api/wedge-matrix/export endpoint for CSV download of wedge matrix data.
+
+**Part 1 — Export Name Mapping:**
+- Added xport_club_name() function to services/wedge_matrix.py that translates internal club names to export-friendly format:
+  - 1W → Dr (Driver)
+  - *H clubs → *Hy suffix (2H → 2Hy, 3H → 3Hy, 4H → 4Hy)
+  - All other clubs unchanged (3W stays 3W, wedges stay PW/AW/SW/LW)
+- Placed in services/wedge_matrix.py alongside wedge matrix logic for cohesion.
+
+**Part 2 — CSV Export Route:**
+- New endpoint at /api/wedge-matrix/export accepts same query params as /api/wedge-matrix: session_id, percentile, include_test, shot_limit.
+- Calls uild_wedge_matrix() and generates CSV with:
+  - Rows = swing sizes (3/3, 2/3, 1/3, 10:2, 10:3, 9:3, 8:4)
+  - Columns = clubs from matrix result (PW, AW, SW, LW), using export name mapping
+  - First column header = "Swing Size"
+  - Cell values = carry distance for fractions, carry/max for clock sizes
+  - Empty cells = blank string
+- Returns CSV as downloadable file with proper Content-Disposition and Content-Type headers.
+- Uses Python's built-in csv module and io.StringIO — no new dependencies.
+
+**Key design decisions:**
+- Export names stay close to industry conventions (Dr, Hy suffix) while preserving readability.
+- Clock-hand sizes show carry/max format (e.g., "27/34") matching UI display.
+- Route placed immediately after /api/wedge-matrix in app.py for logical grouping.
+- Import added to app.py imports alongside other wedge_matrix exports.
+
+**Testing:** Verified export output produces correct CSV structure with proper club name mapping for all club types (woods, hybrids, irons, wedges).
