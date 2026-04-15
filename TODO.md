@@ -99,3 +99,4 @@ nothing else. For the Percentile, just show the Percentile with the number, as i
 -~~The data in the shot pattern should be individual shots, not any summaries or aggregates.~~ DONE
 -~~the data in the side column should be the distance in yards off the centerline. Left should be negative and right should be positive.~~ DONE
 -~~the data in the shotpattern file needs to never exceed 500 rows. Use the most recent 35 rows of data for each club, but still adhere to the percentile and date range choices.~~ DONE
+-I want the ability to store the golf_analytics.db file anywhere, even in a dropbox or microsoft onedrive location. I have copied it to this URL https://1drv.ms/u/c/d4cea6d94eeab62c/IQCaucRFV4vbTK4MhjeS3u-9AY72mPFk9-IlQ5Xsj1m6xF0?e=Pf33KQ . Allow for the location to be changed by the user. You will need to store the location in some type of config file. Create the file if it doesn't exist. Do not commit the config file to the repo.
